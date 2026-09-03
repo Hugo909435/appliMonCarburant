@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/fuel_type.dart';
-import '../../providers/derived_providers.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/stations_provider.dart';
@@ -186,14 +185,20 @@ class _NearMeButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationState = ref.watch(userLocationProvider);
-    final nearby = ref.watch(nearbyStationsProvider);
 
     return OutlinedButton.icon(
       onPressed: locationState.isLoading
           ? null
           : () async {
               await ref.read(userLocationProvider.notifier).requestLocation();
-              if (nearby.isNotEmpty && context.mounted) context.push('/pres-de-moi');
+              if (!context.mounted) return;
+              ref.read(userLocationProvider).when(
+                    data: (_) => context.push('/pres-de-moi'),
+                    error: (err, _) => ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(err.toString())),
+                    ),
+                    loading: () {},
+                  );
             },
       icon: locationState.isLoading
           ? const SizedBox(
