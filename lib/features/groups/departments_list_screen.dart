@@ -43,7 +43,7 @@ class DepartmentsListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Erreur : $err')),
+        error: (err, _) => const Center(child: Text('Impossible de charger les départements.')),
       ),
     );
   }

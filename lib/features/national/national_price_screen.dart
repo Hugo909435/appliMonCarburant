@@ -82,7 +82,7 @@ class NationalPriceScreen extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Text('Erreur : $err'),
+            error: (err, _) => const Text("Impossible de charger l'historique des prix."),
           ),
         ],
       ),

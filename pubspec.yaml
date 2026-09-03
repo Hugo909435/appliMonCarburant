@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -60,9 +62,6 @@ dependencies:
 
   # Itinéraire vers une station (ouvre l'app de plans native)
   url_launcher: ^6.2.0
-
-  # Dates en français
-  intl: ^0.19.0
 
   # Graphique de tendance des prix
   fl_chart: ^0.68.0
