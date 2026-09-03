@@ -33,6 +33,7 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
 
     final ville = _cleanText(pdv.getElement('ville')?.innerText);
     if (ville == null || ville.isEmpty) continue;
+    final villeSlug = slugifyCity(ville);
     final adresse = _cleanText(pdv.getElement('adresse')?.innerText) ?? '';
 
     // Ruptures de stock en cours (fin == "" => toujours en rupture).
@@ -76,7 +77,8 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
       'id': pdv.getAttribute('id') ?? '',
       'cp': cp,
       'dep': dep,
-      'ville': _titleCaseCity(ville),
+      'ville': ville,
+      '_villeSlug': villeSlug,
       'adresse': adresse,
       'lat': lat,
       'lng': lng,
@@ -90,7 +92,76 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
     });
   }
 
+  _resolveCityNames(stations);
+
   return stations;
+}
+
+/// Same commune often appears under several spellings across its stations
+/// ("BOURG-EN-BRESSE", "Bourg en Bresse", "NIMES" vs "Nîmes"): for each
+/// group of stations sharing the same slug, keep whichever raw variant
+/// carries the most accents/hyphens/apostrophes (ties broken by frequency,
+/// then alphabetically), title-case it, and apply it to every station in
+/// the group.
+void _resolveCityNames(List<Map<String, dynamic>> stations) {
+  final variantCounts = <String, Map<String, int>>{};
+  for (final s in stations) {
+    final slug = s['_villeSlug'] as String;
+    final raw = s['ville'] as String;
+    final counts = variantCounts.putIfAbsent(slug, () => {});
+    counts[raw] = (counts[raw] ?? 0) + 1;
+  }
+
+  final resolvedNames = <String, String>{};
+  for (final entry in variantCounts.entries) {
+    final variants = entry.value.entries.toList()
+      ..sort((a, b) {
+        final scoreDiff = _scoreVariant(b.key) - _scoreVariant(a.key);
+        if (scoreDiff != 0) return scoreDiff;
+        final countDiff = b.value - a.value;
+        if (countDiff != 0) return countDiff;
+        return a.key.compareTo(b.key);
+      });
+    resolvedNames[entry.key] = _titleCaseCity(variants.first.key);
+  }
+
+  for (final s in stations) {
+    final slug = s.remove('_villeSlug') as String;
+    s['ville'] = resolvedNames[slug]!;
+  }
+}
+
+int _scoreVariant(String v) {
+  final accents = RegExp(r'[À-ÖØ-öø-ÿ]').allMatches(v).length * 10;
+  final hyphens = RegExp('-').allMatches(v).length * 5;
+  final apostrophes = RegExp(r"['’]").allMatches(v).length * 5;
+  return accents + hyphens + apostrophes;
+}
+
+const _accentFold = {
+  'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a',
+  'ç': 'c',
+  'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+  'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+  'ñ': 'n',
+  'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+  'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+  'ý': 'y', 'ÿ': 'y',
+  'œ': 'oe', 'æ': 'ae',
+};
+
+/// URL-safe, accent-free identifier for a commune name, used only to group
+/// stations that refer to the same city under different spellings.
+String slugifyCity(String name) {
+  final buffer = StringBuffer();
+  for (final rune in name.toLowerCase().runes) {
+    final ch = String.fromCharCode(rune);
+    buffer.write(_accentFold[ch] ?? ch);
+  }
+  return buffer
+      .toString()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
 }
 
 String? _cleanText(String? raw) {
@@ -105,26 +176,23 @@ final _particules = {
 
 /// Presentable case for city names: the feed ships a mix of ALL CAPS and
 /// mixed case. "MONTREAL du GERS" -> "Montreal du Gers".
+///
+/// Capitalizes each run of letters/digits in place and leaves separators
+/// (spaces, hyphens, apostrophes) untouched — unlike JavaScript, Dart's
+/// `String.split` with a capturing-group RegExp does NOT return the
+/// separators alongside the parts, so rebuilding the string that way here
+/// silently drops every space and hyphen ("Neuville-sur-Ain" becomes
+/// "NeuvillesurAin"). `replaceAllMapped` avoids the problem entirely.
 String _titleCaseCity(String raw) {
   final lower = raw.toLowerCase();
-  final parts = lower.split(RegExp(r"([\s\-'’])"));
   var wordIndex = 0;
-  final out = StringBuffer();
-  for (final part in parts) {
-    if (part.isEmpty) continue;
-    if (RegExp(r"^[\s\-'’]$").hasMatch(part)) {
-      out.write(part);
-      continue;
-    }
+  return lower.replaceAllMapped(RegExp(r"[^\s\-'’]+"), (match) {
+    final word = match.group(0)!;
     final isFirst = wordIndex == 0;
     wordIndex++;
-    if (!isFirst && _particules.contains(part)) {
-      out.write(part);
-    } else {
-      out.write(part[0].toUpperCase() + part.substring(1));
-    }
-  }
-  return out.toString();
+    if (!isFirst && _particules.contains(word)) return word;
+    return word[0].toUpperCase() + word.substring(1);
+  });
 }
 
 String _normalizeHeure(String? raw) {
