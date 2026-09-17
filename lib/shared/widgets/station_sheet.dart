@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -264,16 +263,6 @@ class _StationSheetContent extends ConsumerWidget {
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.push('/station/${station.id}');
-              },
-              child: const Text('Ouvrir la fiche complète ›'),
-            ),
-          ),
         ],
       ),
     );

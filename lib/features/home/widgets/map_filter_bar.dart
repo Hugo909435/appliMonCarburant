@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/fuel_colors.dart';
 import '../../../data/models/fuel_type.dart';
+import '../../../providers/derived_providers.dart';
+import '../../../providers/ev_stations_provider.dart';
 import '../../../providers/filters_provider.dart';
 import '../../../providers/station_brands_provider.dart';
 import '../../../providers/stations_provider.dart';
@@ -18,6 +20,10 @@ class _FilterColors {
   static const autoroute = Color(0xFF1E88E5);
   static const departement = Color(0xFF00897B);
   static const favoris = Color(0xFFFFB300);
+  static const plugType = Color(0xFF1E6FA8);
+  static const fastCharge = Color(0xFFFFA000);
+  static const evFree = Color(0xFF43A047);
+  static const evNetwork = Color(0xFF8E24AA);
 }
 
 /// The horizontal filter row floating under the search bar: fuel stations
@@ -72,6 +78,7 @@ class MapFilterBar extends ConsumerWidget {
                 color: _FilterColors.bornes,
                 selected: layer == MapLayer.bornes,
                 tooltip: 'Bornes électriques',
+                tintIcon: true,
                 onTap: () => ref.read(mapLayerProvider.notifier).state =
                     MapLayer.bornes,
               ),
@@ -84,11 +91,23 @@ class MapFilterBar extends ConsumerWidget {
               const SizedBox(width: 8),
               const _BrandChip(),
               const SizedBox(width: 8),
-              const _AutorouteChip(),
-              const SizedBox(width: 8),
               const _DepartmentChip(),
               const SizedBox(width: 8),
+              const _AutorouteChip(),
+              const SizedBox(width: 8),
               const _FavoritesChip(),
+            ],
+            if (layer == MapLayer.bornes) ...[
+              const SizedBox(width: 12),
+              Container(width: 1, color: Colors.white.withValues(alpha: 0.4)),
+              const SizedBox(width: 12),
+              const _PlugTypeChip(),
+              const SizedBox(width: 8),
+              const _EvNetworkChip(),
+              const SizedBox(width: 8),
+              const _FastChargeChip(),
+              const SizedBox(width: 8),
+              const _EvFreeChip(),
             ],
           ],
         ),
@@ -120,6 +139,7 @@ class _LogoBadge extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.tooltip,
+    this.tintIcon = false,
   });
 
   final IconData icon;
@@ -127,6 +147,10 @@ class _LogoBadge extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final String tooltip;
+
+  /// When true, the icon itself is always tinted with [color] (like the
+  /// other filters' logos), instead of staying black until selected.
+  final bool tintIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +170,11 @@ class _LogoBadge extends StatelessWidget {
               width: selected ? 2.5 : 1.2,
             ),
           ),
-          child: Icon(icon, color: Colors.black, size: 18),
+          child: Icon(
+            icon,
+            color: selected || !tintIcon ? Colors.black : color,
+            size: 18,
+          ),
         ),
       ),
     );
@@ -161,36 +189,13 @@ class _FuelChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fuel = ref.watch(selectedFuelProvider);
-    return GestureDetector(
+    return _Pill(
+      selected: false,
+      icon: Icons.water_drop_rounded,
+      iconColor: fuel.color,
+      // "Gazole" est plus long que les autres codes (SP95, E10, ...).
+      label: fuel == FuelType.gazole ? 'Carburant' : fuel.code,
       onTap: () => _pickFuel(context, ref),
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: fuel.color,
-          borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.black, width: 2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.water_drop_rounded,
-              color: Colors.black,
-              size: 16,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              fuel.code,
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w800,
-                fontSize: 12.5,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -254,7 +259,6 @@ class _BrandChip extends ConsumerWidget {
       onTap: () {
         if (!enabled) {
           ref.read(brandFilterEnabledProvider.notifier).state = true;
-          return;
         }
         _pickBrand(context, ref);
       },
@@ -327,14 +331,89 @@ class _AutorouteChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final active = ref.watch(autorouteOnlyProvider);
+    final highway = ref.watch(highwayFilterProvider);
+    final label = highway == null || highway == kAnyHighway
+        ? 'Autoroute'
+        : highway;
+
     return _Pill(
-      selected: active,
+      selected: highway != null,
       icon: Icons.route_rounded,
       iconColor: _FilterColors.autoroute,
-      label: 'Autoroute',
-      onTap: () =>
-          ref.read(autorouteOnlyProvider.notifier).state = !active,
+      label: label,
+      trailing: highway != null
+          ? GestureDetector(
+              onTap: () => ref.read(highwayFilterProvider.notifier).state = null,
+              child: const Icon(Icons.close_rounded, size: 15),
+            )
+          : null,
+      onTap: () => _pickHighway(context, ref),
+    );
+  }
+
+  void _pickHighway(BuildContext context, WidgetRef ref) {
+    final highways = ref.read(autoroutesListProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Autoroute', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: ListView(
+                  children: [
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(
+                        Icons.route_rounded,
+                        color: _FilterColors.autoroute,
+                      ),
+                      title: const Text('Toutes les autoroutes'),
+                      onTap: () {
+                        ref.read(highwayFilterProvider.notifier).state =
+                            kAnyHighway;
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    if (highways.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('Aucune autoroute trouvée.'),
+                      )
+                    else
+                      for (final hw in highways)
+                        ListTile(
+                          dense: true,
+                          title: Text(hw.code),
+                          trailing: Text(
+                            '${hw.count} stations',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          onTap: () {
+                            ref.read(highwayFilterProvider.notifier).state =
+                                hw.code;
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -467,6 +546,180 @@ class _DepartmentPickerSheetState
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The known plug types the IRVE feed distinguishes — fixed, unlike brands
+/// or networks, so no need to derive them from the loaded data.
+const _plugTypes = ['Type 2', 'Combo CCS', 'CHAdeMO', 'Type EF'];
+
+class _PlugTypeChip extends ConsumerWidget {
+  const _PlugTypeChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plugType = ref.watch(plugTypeFilterProvider);
+    return _Pill(
+      selected: plugType != null,
+      icon: Icons.power_rounded,
+      iconColor: _FilterColors.plugType,
+      label: plugType ?? 'Prise',
+      trailing: plugType != null
+          ? GestureDetector(
+              onTap: () => ref.read(plugTypeFilterProvider.notifier).state = null,
+              child: const Icon(Icons.close_rounded, size: 15),
+            )
+          : null,
+      onTap: () => _pickPlugType(context, ref),
+    );
+  }
+
+  void _pickPlugType(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Type de prise', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final type in _plugTypes)
+                    ChoiceChip(
+                      label: Text(type),
+                      selected: type == ref.read(plugTypeFilterProvider),
+                      onSelected: (_) {
+                        ref.read(plugTypeFilterProvider.notifier).state = type;
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EvNetworkChip extends ConsumerWidget {
+  const _EvNetworkChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final network = ref.watch(evNetworkFilterProvider);
+    return _Pill(
+      selected: network != null,
+      icon: Icons.apartment_rounded,
+      iconColor: _FilterColors.evNetwork,
+      label: network ?? 'Réseau',
+      trailing: network != null
+          ? GestureDetector(
+              onTap: () => ref.read(evNetworkFilterProvider.notifier).state = null,
+              child: const Icon(Icons.close_rounded, size: 15),
+            )
+          : null,
+      onTap: () => _pickNetwork(context, ref),
+    );
+  }
+
+  void _pickNetwork(BuildContext context, WidgetRef ref) {
+    final evStations = ref.read(evStationsProvider).valueOrNull ?? const [];
+    final networks =
+        evStations.map((e) => e.network).where((n) => n.isNotEmpty).toSet().toList()
+          ..sort();
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Réseau visible ici', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'D\'après les bornes affichées sur la zone.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (networks.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Aucun réseau trouvé sur cette zone.'),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final n in networks)
+                      ChoiceChip(
+                        label: Text(n),
+                        selected: n == ref.read(evNetworkFilterProvider),
+                        onSelected: (_) {
+                          ref.read(evNetworkFilterProvider.notifier).state = n;
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FastChargeChip extends ConsumerWidget {
+  const _FastChargeChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(fastChargeOnlyProvider);
+    return _Pill(
+      selected: active,
+      icon: Icons.bolt_rounded,
+      iconColor: _FilterColors.fastCharge,
+      label: 'Charge rapide',
+      onTap: () =>
+          ref.read(fastChargeOnlyProvider.notifier).state = !active,
+    );
+  }
+}
+
+class _EvFreeChip extends ConsumerWidget {
+  const _EvFreeChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(evFreeOnlyProvider);
+    return _Pill(
+      selected: active,
+      icon: Icons.money_off_rounded,
+      iconColor: _FilterColors.evFree,
+      label: 'Gratuit',
+      onTap: () => ref.read(evFreeOnlyProvider.notifier).state = !active,
     );
   }
 }

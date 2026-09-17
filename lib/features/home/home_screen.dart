@@ -408,7 +408,7 @@ class _StationMarkersLayer extends ConsumerWidget {
     final allStations =
         ref.watch(stationsProvider).valueOrNull ?? const <Station>[];
     final fuel = ref.watch(selectedFuelProvider);
-    final autorouteOnly = ref.watch(autorouteOnlyProvider);
+    final highwayFilter = ref.watch(highwayFilterProvider);
     final dep = ref.watch(departmentFilterProvider);
     final favoritesOnly = ref.watch(favoritesOnlyProvider);
     final favoriteIds =
@@ -420,7 +420,11 @@ class _StationMarkersLayer extends ConsumerWidget {
     var stations = allStations
         .where((s) => s.prices.containsKey(fuel.code))
         .toList();
-    if (autorouteOnly) stations = stations.where((s) => s.isAutoroute).toList();
+    if (highwayFilter == kAnyHighway) {
+      stations = stations.where((s) => s.isAutoroute).toList();
+    } else if (highwayFilter != null) {
+      stations = stations.where((s) => s.highway == highwayFilter).toList();
+    }
     if (dep != null) stations = stations.where((s) => s.dep == dep).toList();
     if (favoritesOnly) {
       stations = stations.where((s) => favoriteIds.contains(s.id)).toList();
@@ -494,7 +498,24 @@ class _EvMarkersLayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final evAsync = ref.watch(evStationsProvider);
-    final evStations = evAsync.valueOrNull ?? const <EvStation>[];
+    var evStations = evAsync.valueOrNull ?? const <EvStation>[];
+    final plugType = ref.watch(plugTypeFilterProvider);
+    final network = ref.watch(evNetworkFilterProvider);
+    final fastChargeOnly = ref.watch(fastChargeOnlyProvider);
+    final freeOnly = ref.watch(evFreeOnlyProvider);
+
+    if (plugType != null) {
+      evStations = evStations.where((e) => e.plugTypes.contains(plugType)).toList();
+    }
+    if (network != null) {
+      evStations = evStations.where((e) => e.network == network).toList();
+    }
+    if (fastChargeOnly) {
+      evStations = evStations.where((e) => e.maxPowerKw >= 50).toList();
+    }
+    if (freeOnly) {
+      evStations = evStations.where((e) => e.free).toList();
+    }
 
     return MarkerClusterLayerWidget(
       options: MarkerClusterLayerOptions(

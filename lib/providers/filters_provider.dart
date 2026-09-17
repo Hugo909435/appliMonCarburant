@@ -10,8 +10,13 @@ enum MapLayer { stations, bornes }
 
 final mapLayerProvider = StateProvider<MapLayer?>((ref) => null);
 
-/// Restrict fuel stations to motorway (autoroute) ones only.
-final autorouteOnlyProvider = StateProvider<bool>((ref) => false);
+/// Sentinel value of [highwayFilterProvider] meaning "any motorway
+/// station", as opposed to a specific highway code (e.g. "A6").
+const kAnyHighway = '*';
+
+/// Restrict fuel stations to a single highway (e.g. "A6"), to any
+/// motorway station ([kAnyHighway]), or null for no filter.
+final highwayFilterProvider = StateProvider<String?>((ref) => null);
 
 /// Restrict fuel stations to a single département (num, e.g. "75").
 final departmentFilterProvider = StateProvider<String?>((ref) => null);
@@ -25,3 +30,17 @@ final selectedBrandProvider = StateProvider<String?>((ref) => null);
 
 /// Show only stations already saved as favorites.
 final favoritesOnlyProvider = StateProvider<bool>((ref) => false);
+
+/// Restrict EV chargers to a single plug type (e.g. "Combo CCS"), or null
+/// for no filter.
+final plugTypeFilterProvider = StateProvider<String?>((ref) => null);
+
+/// Restrict EV chargers to fast-charging ones (>= 50 kW) only.
+final fastChargeOnlyProvider = StateProvider<bool>((ref) => false);
+
+/// Restrict EV chargers to free-to-use ones only.
+final evFreeOnlyProvider = StateProvider<bool>((ref) => false);
+
+/// Restrict EV chargers to a single network/operator (e.g. "TESLA
+/// SUPERCHARGER"), or null for no filter.
+final evNetworkFilterProvider = StateProvider<String?>((ref) => null);
