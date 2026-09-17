@@ -1,0 +1,163 @@
+[
+  {
+    "id": "sample-75001-001",
+    "cp": "75001",
+    "dep": "75",
+    "ville": "Paris",
+    "adresse": "12 Rue de Rivoli",
+    "lat": 48.8592,
+    "lng": 2.3417,
+    "pop": "route",
+    "prices": { "Gazole": 1.749, "SP95": 1.849, "SP98": 1.899, "E10": 1.799 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T08:00:00",
+      "SP95": "2026-09-17T08:00:00",
+      "SP98": "2026-09-17T08:00:00",
+      "E10": "2026-09-17T08:00:00"
+    },
+    "services": ["Automate CB", "Boutique"],
+    "horaires": ["06:00-22:00", "06:00-22:00", "06:00-22:00", "06:00-22:00", "06:00-22:00", "08:00-20:00", "08:00-20:00"],
+    "automate": false,
+    "highway": null
+  },
+  {
+    "id": "sample-69002-001",
+    "cp": "69002",
+    "dep": "69",
+    "ville": "Lyon",
+    "adresse": "5 Quai Saint-Antoine",
+    "lat": 45.7597,
+    "lng": 4.8320,
+    "pop": "route",
+    "prices": { "Gazole": 1.729, "SP95": 1.829, "E10": 1.779, "GPLc": 0.949 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T07:30:00",
+      "SP95": "2026-09-17T07:30:00",
+      "E10": "2026-09-17T07:30:00",
+      "GPLc": "2026-09-17T07:30:00"
+    },
+    "services": ["Automate CB"],
+    "horaires": null,
+    "automate": true,
+    "highway": null
+  },
+  {
+    "id": "sample-13001-001",
+    "cp": "13001",
+    "dep": "13",
+    "ville": "Marseille",
+    "adresse": "20 La Canebière",
+    "lat": 43.2977,
+    "lng": 5.3765,
+    "pop": "route",
+    "prices": { "Gazole": 1.759, "SP95": 1.859, "SP98": 1.909 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T09:00:00",
+      "SP95": "2026-09-17T09:00:00",
+      "SP98": "2026-09-17T09:00:00"
+    },
+    "services": ["Boutique", "Lavage"],
+    "horaires": ["07:00-21:00", "07:00-21:00", "07:00-21:00", "07:00-21:00", "07:00-21:00", "07:00-21:00", "09:00-19:00"],
+    "automate": false,
+    "highway": null
+  },
+  {
+    "id": "sample-31000-001",
+    "cp": "31000",
+    "dep": "31",
+    "ville": "Toulouse",
+    "adresse": "8 Allées Jean Jaurès",
+    "lat": 43.6086,
+    "lng": 1.4558,
+    "pop": "route",
+    "prices": { "Gazole": 1.739, "E10": 1.769, "E85": 0.899 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T06:45:00",
+      "E10": "2026-09-17T06:45:00",
+      "E85": "2026-09-17T06:45:00"
+    },
+    "services": ["Automate CB", "Gonflage pneus"],
+    "horaires": null,
+    "automate": true,
+    "highway": null
+  },
+  {
+    "id": "sample-33000-001",
+    "cp": "33000",
+    "dep": "33",
+    "ville": "Bordeaux",
+    "adresse": "3 Cours de l'Intendance",
+    "lat": 44.8404,
+    "lng": -0.5786,
+    "pop": "route",
+    "prices": { "Gazole": 1.719, "SP95": 1.819, "SP98": 1.869, "E10": 1.759 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T08:15:00",
+      "SP95": "2026-09-17T08:15:00",
+      "SP98": "2026-09-17T08:15:00",
+      "E10": "2026-09-17T08:15:00"
+    },
+    "services": ["Boutique"],
+    "horaires": ["06:30-21:30", "06:30-21:30", "06:30-21:30", "06:30-21:30", "06:30-21:30", "06:30-21:30", "07:30-20:00"],
+    "automate": false,
+    "highway": null
+  },
+  {
+    "id": "sample-44000-001",
+    "cp": "44000",
+    "dep": "44",
+    "ville": "Nantes",
+    "adresse": "2 Rue Crébillon",
+    "lat": 47.2138,
+    "lng": -1.5561,
+    "pop": "route",
+    "prices": { "Gazole": 1.769, "SP95": 1.869 },
+    "priceUpdates": { "Gazole": "2026-09-17T07:00:00", "SP95": "2026-09-17T07:00:00" },
+    "services": [],
+    "horaires": null,
+    "automate": true,
+    "highway": null
+  },
+  {
+    "id": "sample-67000-001",
+    "cp": "67000",
+    "dep": "67",
+    "ville": "Strasbourg",
+    "adresse": "1 Place Kléber",
+    "lat": 48.5839,
+    "lng": 7.7455,
+    "pop": "route",
+    "prices": { "Gazole": 1.789, "SP95": 1.889, "SP98": 1.939, "GPLc": 0.979 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T09:30:00",
+      "SP95": "2026-09-17T09:30:00",
+      "SP98": "2026-09-17T09:30:00",
+      "GPLc": "2026-09-17T09:30:00"
+    },
+    "services": ["Automate CB", "Boutique", "Lavage"],
+    "horaires": ["06:00-23:00", "06:00-23:00", "06:00-23:00", "06:00-23:00", "06:00-23:00", "06:00-23:00", "06:00-23:00"],
+    "automate": false,
+    "highway": null
+  },
+  {
+    "id": "sample-A6-001",
+    "cp": "89000",
+    "dep": "89",
+    "ville": "Auxerre",
+    "adresse": "Aire de Auxerre Nord, A6",
+    "lat": 47.8322,
+    "lng": 3.5731,
+    "pop": "autoroute",
+    "prices": { "Gazole": 1.899, "SP95": 1.989, "SP98": 2.039, "E10": 1.949 },
+    "priceUpdates": {
+      "Gazole": "2026-09-17T10:00:00",
+      "SP95": "2026-09-17T10:00:00",
+      "SP98": "2026-09-17T10:00:00",
+      "E10": "2026-09-17T10:00:00"
+    },
+    "services": ["Automate CB", "Boutique", "Restauration"],
+    "horaires": null,
+    "automate": true,
+    "highway": "A6"
+  }
+]

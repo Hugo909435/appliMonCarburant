@@ -9,13 +9,17 @@ import '../data/services/departments_data.dart';
 import '../data/services/price_history_service.dart';
 import 'stats_provider.dart';
 
-final stationRepositoryProvider = Provider<StationRepository>((ref) => StationRepository());
+final stationRepositoryProvider = Provider<StationRepository>(
+  (ref) => StationRepository(),
+);
 
 final departmentsDataProvider = FutureProvider<Map<String, Department>>((ref) {
   return DepartmentsData().load();
 });
 
-final priceHistoryServiceProvider = Provider<PriceHistoryService>((ref) => PriceHistoryService());
+final priceHistoryServiceProvider = Provider<PriceHistoryService>(
+  (ref) => PriceHistoryService(),
+);
 
 final lastUpdateProvider = StateProvider<DateTime?>((ref) => null);
 

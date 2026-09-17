@@ -66,6 +66,14 @@ dependencies:
   # Graphique de tendance des prix
   fl_chart: ^0.68.0
 
+  # Typographie
+  google_fonts: ^6.2.1
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  google_sign_in: ^7.2.0
+  google_sign_in_web: ^1.1.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -95,6 +103,7 @@ flutter:
 
   assets:
     - assets/data/departments.json
+    - assets/data/sample_stations.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

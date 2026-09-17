@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../../core/theme/fuel_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/fuel_stat.dart';
 import '../../data/models/fuel_type.dart';
+import 'price_totem.dart';
 
 class StatsSummaryCard extends StatelessWidget {
   const StatsSummaryCard({super.key, required this.stats, this.title});
@@ -19,9 +20,8 @@ class StatsSummaryCard extends StatelessWidget {
     }
 
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -29,12 +29,16 @@ class StatsSummaryCard extends StatelessWidget {
               Text(title!, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
             ],
-            Wrap(
-              spacing: 20,
-              runSpacing: 12,
-              children: [
-                for (final fuel in entries) _FuelStatColumn(fuel: fuel, stat: stats[fuel]!),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final fuel in entries) ...[
+                    _FuelStatColumn(fuel: fuel, stat: stats[fuel]!),
+                    const SizedBox(width: 16),
+                  ],
+                ],
+              ),
             ),
           ],
         ),
@@ -51,23 +55,29 @@ class _FuelStatColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 96,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            fuel.code,
-            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary),
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          fuel.code,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: fuel.color,
+            fontSize: 12.5,
           ),
-          const SizedBox(height: 2),
-          Text(formatPrice(stat.avg), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(
-            '${formatPrice(stat.min)} - ${formatPrice(stat.max)}',
-            style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 6),
+        PriceTotem(price: stat.avg, accentColor: fuel.color),
+        const SizedBox(height: 4),
+        Text(
+          '${formatPrice(stat.min)} – ${formatPrice(stat.max)}',
+          style: TextStyle(
+            color: onSurface.withValues(alpha: 0.55),
+            fontSize: 11,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

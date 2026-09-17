@@ -13,7 +13,9 @@ import '../../core/utils/dep_utils.dart';
 /// function and only use isolate-safe (non-Flutter) types.
 List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
   final archive = ZipDecoder().decodeBytes(zipBytes);
-  final xmlFile = archive.files.firstWhere((f) => f.name.toLowerCase().endsWith('.xml'));
+  final xmlFile = archive.files.firstWhere(
+    (f) => f.name.toLowerCase().endsWith('.xml'),
+  );
   final bytes = xmlFile.content as List<int>;
   final xmlText = latin1.decode(bytes);
 
@@ -27,7 +29,8 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
 
     final latRaw = double.tryParse(pdv.getAttribute('latitude') ?? '');
     final lngRaw = double.tryParse(pdv.getAttribute('longitude') ?? '');
-    if (latRaw == null || lngRaw == null || latRaw == 0 || lngRaw == 0) continue;
+    if (latRaw == null || lngRaw == null || latRaw == 0 || lngRaw == 0)
+      continue;
     final lat = latRaw / 100000;
     final lng = lngRaw / 100000;
 
@@ -139,15 +142,35 @@ int _scoreVariant(String v) {
 }
 
 const _accentFold = {
-  'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a',
+  'à': 'a',
+  'á': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'å': 'a',
   'ç': 'c',
-  'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-  'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+  'è': 'e',
+  'é': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'ì': 'i',
+  'í': 'i',
+  'î': 'i',
+  'ï': 'i',
   'ñ': 'n',
-  'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-  'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-  'ý': 'y', 'ÿ': 'y',
-  'œ': 'oe', 'æ': 'ae',
+  'ò': 'o',
+  'ó': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ù': 'u',
+  'ú': 'u',
+  'û': 'u',
+  'ü': 'u',
+  'ý': 'y',
+  'ÿ': 'y',
+  'œ': 'oe',
+  'æ': 'ae',
 };
 
 /// URL-safe, accent-free identifier for a commune name, used only to group
@@ -170,8 +193,26 @@ String? _cleanText(String? raw) {
 }
 
 final _particules = {
-  'de', 'du', 'des', 'd', 'la', 'le', 'les', 'l', 'sur', 'sous', 'en', 'et',
-  'au', 'aux', 'lès', 'lez', 'sainte-', 'a', 'à', 'the',
+  'de',
+  'du',
+  'des',
+  'd',
+  'la',
+  'le',
+  'les',
+  'l',
+  'sur',
+  'sous',
+  'en',
+  'et',
+  'au',
+  'aux',
+  'lès',
+  'lez',
+  'sainte-',
+  'a',
+  'à',
+  'the',
 };
 
 /// Presentable case for city names: the feed ships a mix of ALL CAPS and
@@ -197,7 +238,8 @@ String _titleCaseCity(String raw) {
 
 String _normalizeHeure(String? raw) {
   if (raw == null || raw.isEmpty) return '';
-  final m = RegExp(r'^(\d{1,2})[.:h]?(\d{2})?$').firstMatch(raw.trim().replaceAll(',', '.'));
+  final m = RegExp(r'^(\d{1,2})[.:h]?(\d{2})?$')
+      .firstMatch(raw.trim().replaceAll(',', '.'));
   if (m == null) return '';
   final h = int.parse(m.group(1)!);
   final min = m.group(2) != null ? int.parse(m.group(2)!) : 0;

@@ -22,11 +22,11 @@ class GroupQuery {
 }
 
 Map<FuelType, FuelStat?> computeStats(List<Station> stations) => {
-      for (final fuel in FuelType.values)
-        fuel: FuelStat.fromPrices(
-          stations.map((s) => s.prices[fuel.code]).whereType<double>(),
-        ),
-    };
+  for (final fuel in FuelType.values)
+    fuel: FuelStat.fromPrices(
+      stations.map((s) => s.prices[fuel.code]).whereType<double>(),
+    ),
+};
 
 /// National average/min/max per fuel, computed client-side from the full
 /// station list (there is no separately published stats endpoint to read).
@@ -35,20 +35,24 @@ final nationalStatsProvider = Provider<Map<FuelType, FuelStat?>>((ref) {
   return computeStats(stations);
 });
 
-final groupStationsProvider =
-    Provider.autoDispose.family<List<Station>, GroupQuery>((ref, query) {
-  final stations = ref.watch(stationsProvider).valueOrNull ?? const <Station>[];
-  return switch (query.type) {
-    GroupType.department => stations.where((s) => s.dep == query.key).toList(),
-    GroupType.region => stations.where((s) => _regionOf(ref, s) == query.key).toList(),
-    GroupType.autoroute => stations.where((s) => s.highway == query.key).toList(),
-  };
-});
+final groupStationsProvider = Provider.autoDispose
+    .family<List<Station>, GroupQuery>((ref, query) {
+      final stations =
+          ref.watch(stationsProvider).valueOrNull ?? const <Station>[];
+      return switch (query.type) {
+        GroupType.department =>
+          stations.where((s) => s.dep == query.key).toList(),
+        GroupType.region =>
+          stations.where((s) => _regionOf(ref, s) == query.key).toList(),
+        GroupType.autoroute =>
+          stations.where((s) => s.highway == query.key).toList(),
+      };
+    });
 
-final groupStatsProvider =
-    Provider.autoDispose.family<Map<FuelType, FuelStat?>, GroupQuery>((ref, query) {
-  return computeStats(ref.watch(groupStationsProvider(query)));
-});
+final groupStatsProvider = Provider.autoDispose
+    .family<Map<FuelType, FuelStat?>, GroupQuery>((ref, query) {
+      return computeStats(ref.watch(groupStationsProvider(query)));
+    });
 
 String? _regionOf(Ref ref, Station s) {
   final departments = ref.watch(departmentsDataProvider).valueOrNull;

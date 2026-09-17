@@ -14,7 +14,9 @@ class GovFeedService {
         .get(Uri.parse(_url), headers: {'User-Agent': 'mon-carburant-app/1.0'})
         .timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
-      throw Exception('Échec du téléchargement des données (HTTP ${response.statusCode})');
+      throw Exception(
+        'Échec du téléchargement des données (HTTP ${response.statusCode})',
+      );
     }
     final bytes = response.bodyBytes;
     return compute(parseGovFeed, Uint8List.fromList(bytes));

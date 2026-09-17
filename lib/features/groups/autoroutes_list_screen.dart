@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../providers/derived_providers.dart';
 
 class AutoroutesListScreen extends ConsumerWidget {
@@ -16,15 +17,31 @@ class AutoroutesListScreen extends ConsumerWidget {
       body: highways.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               itemCount: highways.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final hw = highways[index];
-                return ListTile(
-                  leading: const Icon(Icons.route),
-                  title: Text(hw.code),
-                  trailing: Text('${hw.count} stations'),
-                  onTap: () => context.push('/autoroute/${hw.code}', extra: hw.code),
+                return Card(
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    leading: const Icon(
+                      Icons.route_outlined,
+                      color: AppColors.accent,
+                    ),
+                    title: Text(
+                      hw.code,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    trailing: Text(
+                      '${hw.count} stations',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    onTap: () =>
+                        context.push('/autoroute/${hw.code}', extra: hw.code),
+                  ),
                 );
               },
             ),

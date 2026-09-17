@@ -5,7 +5,11 @@ import '../../providers/stats_provider.dart';
 import '../../shared/widgets/station_list_screen.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
-  const GroupDetailScreen({super.key, required this.title, required this.query});
+  const GroupDetailScreen({
+    super.key,
+    required this.title,
+    required this.query,
+  });
 
   final String title;
   final GroupQuery query;
@@ -15,10 +19,6 @@ class GroupDetailScreen extends ConsumerWidget {
     final stations = ref.watch(groupStationsProvider(query));
     final stats = ref.watch(groupStatsProvider(query));
 
-    return StationListScreen(
-      title: title,
-      stations: stations,
-      stats: stats,
-    );
+    return StationListScreen(title: title, stations: stations, stats: stats);
   }
 }

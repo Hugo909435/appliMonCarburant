@@ -11,14 +11,17 @@ class PriceHistoryPoint {
   final Map<String, double> prices;
 
   Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String().substring(0, 10),
-        'prices': prices,
-      };
+    'date': date.toIso8601String().substring(0, 10),
+    'prices': prices,
+  };
 
-  factory PriceHistoryPoint.fromJson(Map<String, dynamic> json) => PriceHistoryPoint(
+  factory PriceHistoryPoint.fromJson(Map<String, dynamic> json) =>
+      PriceHistoryPoint(
         date: DateTime.parse(json['date'] as String),
         prices: Map<String, double>.from(
-          (json['prices'] as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
+          (json['prices'] as Map).map(
+            (k, v) => MapEntry(k as String, (v as num).toDouble()),
+          ),
         ),
       );
 }
@@ -56,6 +59,9 @@ class PriceHistoryService {
         : points;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(trimmed.map((p) => p.toJson()).toList()));
+    await prefs.setString(
+      _key,
+      jsonEncode(trimmed.map((p) => p.toJson()).toList()),
+    );
   }
 }

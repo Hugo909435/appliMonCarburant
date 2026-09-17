@@ -33,17 +33,26 @@ class StationCache {
   }
 
   Future<void> write(List<Map<String, dynamic>> stations) async {
-    final file = await _cacheFile();
-    await file.writeAsString(jsonEncode(stations));
-    final meta = await _metaFile();
-    await meta.writeAsString(jsonEncode({'lastUpdate': DateTime.now().toIso8601String()}));
+    // No filesystem on web: fail silently rather than losing the just-fetched
+    // data (the caller would otherwise treat this as a full refresh failure).
+    try {
+      final file = await _cacheFile();
+      await file.writeAsString(jsonEncode(stations));
+      final meta = await _metaFile();
+      await meta.writeAsString(
+        jsonEncode({'lastUpdate': DateTime.now().toIso8601String()}),
+      );
+    } catch (_) {
+      return;
+    }
   }
 
   Future<DateTime?> lastUpdate() async {
     try {
       final meta = await _metaFile();
       if (!await meta.exists()) return null;
-      final json = jsonDecode(await meta.readAsString()) as Map<String, dynamic>;
+      final json =
+          jsonDecode(await meta.readAsString()) as Map<String, dynamic>;
       return DateTime.tryParse(json['lastUpdate'] as String);
     } catch (_) {
       return null;

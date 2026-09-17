@@ -11,7 +11,8 @@ class Department {
   final String region;
   final String regionSlug;
 
-  factory Department.fromJson(String number, Map<String, dynamic> json) => Department(
+  factory Department.fromJson(String number, Map<String, dynamic> json) =>
+      Department(
         num: number,
         name: json['name'] as String,
         region: json['region'] as String,

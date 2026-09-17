@@ -3,7 +3,9 @@ import 'package:geolocator/geolocator.dart';
 
 import '../data/services/location_service.dart';
 
-final locationServiceProvider = Provider<LocationService>((ref) => LocationService());
+final locationServiceProvider = Provider<LocationService>(
+  (ref) => LocationService(),
+);
 
 class UserLocationNotifier extends AsyncNotifier<Position?> {
   @override
@@ -11,10 +13,13 @@ class UserLocationNotifier extends AsyncNotifier<Position?> {
 
   Future<void> requestLocation() async {
     state = const AsyncLoading<Position?>();
-    state = await AsyncValue.guard(() => ref.read(locationServiceProvider).getCurrentPosition());
+    state = await AsyncValue.guard(
+      () => ref.read(locationServiceProvider).getCurrentPosition(),
+    );
   }
 }
 
-final userLocationProvider = AsyncNotifierProvider<UserLocationNotifier, Position?>(
-  UserLocationNotifier.new,
-);
+final userLocationProvider =
+    AsyncNotifierProvider<UserLocationNotifier, Position?>(
+      UserLocationNotifier.new,
+    );

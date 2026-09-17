@@ -62,7 +62,8 @@ class Station {
     const r = 6371.0;
     final dLat = _deg2rad(lat2 - lat);
     final dLng = _deg2rad(lng2 - lng);
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
         math.cos(_deg2rad(lat)) *
             math.cos(_deg2rad(lat2)) *
             math.sin(dLng / 2) *
@@ -74,38 +75,40 @@ class Station {
   static double _deg2rad(double deg) => deg * (math.pi / 180.0);
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'cp': cp,
-        'dep': dep,
-        'ville': ville,
-        'adresse': adresse,
-        'lat': lat,
-        'lng': lng,
-        'pop': pop,
-        'prices': prices,
-        'priceUpdates': priceUpdates,
-        'services': services,
-        'horaires': horaires,
-        'automate': automate,
-        'highway': highway,
-      };
+    'id': id,
+    'cp': cp,
+    'dep': dep,
+    'ville': ville,
+    'adresse': adresse,
+    'lat': lat,
+    'lng': lng,
+    'pop': pop,
+    'prices': prices,
+    'priceUpdates': priceUpdates,
+    'services': services,
+    'horaires': horaires,
+    'automate': automate,
+    'highway': highway,
+  };
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
-        id: json['id'] as String,
-        cp: json['cp'] as String,
-        dep: json['dep'] as String,
-        ville: json['ville'] as String,
-        adresse: json['adresse'] as String,
-        lat: (json['lat'] as num).toDouble(),
-        lng: (json['lng'] as num).toDouble(),
-        pop: json['pop'] as String,
-        prices: Map<String, double>.from(
-          (json['prices'] as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
-        ),
-        priceUpdates: Map<String, String>.from(json['priceUpdates'] as Map),
-        services: List<String>.from(json['services'] as List),
-        horaires: (json['horaires'] as List?)?.map((e) => e as String?).toList(),
-        automate: json['automate'] as bool,
-        highway: json['highway'] as String?,
-      );
+    id: json['id'] as String,
+    cp: json['cp'] as String,
+    dep: json['dep'] as String,
+    ville: json['ville'] as String,
+    adresse: json['adresse'] as String,
+    lat: (json['lat'] as num).toDouble(),
+    lng: (json['lng'] as num).toDouble(),
+    pop: json['pop'] as String,
+    prices: Map<String, double>.from(
+      (json['prices'] as Map).map(
+        (k, v) => MapEntry(k as String, (v as num).toDouble()),
+      ),
+    ),
+    priceUpdates: Map<String, String>.from(json['priceUpdates'] as Map),
+    services: List<String>.from(json['services'] as List),
+    horaires: (json['horaires'] as List?)?.map((e) => e as String?).toList(),
+    automate: json['automate'] as bool,
+    highway: json['highway'] as String?,
+  );
 }

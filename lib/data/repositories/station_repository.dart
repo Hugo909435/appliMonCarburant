@@ -1,14 +1,22 @@
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
+
 import '../models/station.dart';
 import '../services/gov_feed_service.dart';
+import '../services/sample_stations_service.dart';
 import '../services/station_cache.dart';
 
 class StationRepository {
-  StationRepository({GovFeedService? feedService, StationCache? cache})
-      : _feed = feedService ?? GovFeedService(),
-        _cache = cache ?? StationCache();
+  StationRepository({
+    GovFeedService? feedService,
+    StationCache? cache,
+    SampleStationsService? sample,
+  }) : _feed = feedService ?? GovFeedService(),
+       _cache = cache ?? StationCache(),
+       _sample = sample ?? SampleStationsService();
 
   final GovFeedService _feed;
   final StationCache _cache;
+  final SampleStationsService _sample;
 
   /// Cached data is considered fresh enough to skip an automatic refresh
   /// for this long (the government feed itself updates continuously, but
@@ -30,8 +38,18 @@ class StationRepository {
   }
 
   Future<List<Station>> refresh() async {
-    final raw = await _feed.fetchStations();
-    await _cache.write(raw);
-    return raw.map(Station.fromJson).toList();
+    try {
+      final raw = await _feed.fetchStations();
+      await _cache.write(raw);
+      return raw.map(Station.fromJson).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+          'Flux gouvernemental indisponible ($e) : données de test locales.',
+        );
+        return _sample.load();
+      }
+      rethrow;
+    }
   }
 }

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/fuel_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
 import '../../providers/favorites_provider.dart';
+import 'price_totem.dart';
 
 class StationListTile extends ConsumerWidget {
   const StationListTile({
@@ -24,44 +26,75 @@ class StationListTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final price = station.prices[fuel.code];
-    final isFavorite = ref.watch(favoritesProvider.select(
-      (v) => (v.valueOrNull ?? const {}).contains(station.id),
-    ));
+    final isFavorite = ref.watch(
+      favoritesProvider.select(
+        (v) => (v.valueOrNull ?? const {}).contains(station.id),
+      ),
+    );
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-        child: Icon(
-          station.isAutoroute ? Icons.local_gas_station : Icons.local_gas_station_outlined,
-          color: AppColors.primary,
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 40,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: fuel.color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      station.ville,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        station.adresse,
+                        if (distanceKm != null) formatDistance(distanceKm!),
+                      ].where((s) => s.isNotEmpty).join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: onSurface.withValues(alpha: 0.6),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              PriceTotem(price: price, accentColor: fuel.color),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: isFavorite
+                      ? AppColors.accent
+                      : onSurface.withValues(alpha: 0.35),
+                ),
+                onPressed: () =>
+                    ref.read(favoritesProvider.notifier).toggle(station.id),
+              ),
+            ],
+          ),
         ),
-      ),
-      title: Text(station.ville, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(
-        [
-          station.adresse,
-          if (distanceKm != null) formatDistance(distanceKm!),
-        ].where((s) => s.isNotEmpty).join(' · '),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            formatPrice(price),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              isFavorite ? Icons.star : Icons.star_border,
-              color: isFavorite ? AppColors.accent : null,
-            ),
-            onPressed: () => ref.read(favoritesProvider.notifier).toggle(station.id),
-          ),
-        ],
       ),
     );
   }

@@ -1,5 +1,10 @@
 class FuelStat {
-  const FuelStat({required this.avg, required this.min, required this.max, required this.count});
+  const FuelStat({
+    required this.avg,
+    required this.min,
+    required this.max,
+    required this.count,
+  });
 
   final double avg;
   final double min;

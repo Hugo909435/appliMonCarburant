@@ -13,7 +13,10 @@ class DepartmentsData {
     final raw = await rootBundle.loadString('assets/data/departments.json');
     final json = jsonDecode(raw) as Map<String, dynamic>;
     final result = json.map(
-      (key, value) => MapEntry(key, Department.fromJson(key, value as Map<String, dynamic>)),
+      (key, value) => MapEntry(
+        key,
+        Department.fromJson(key, value as Map<String, dynamic>),
+      ),
     );
     _cache = result;
     return result;

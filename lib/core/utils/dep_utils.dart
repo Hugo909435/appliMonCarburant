@@ -15,9 +15,15 @@ String? depFromCp(String? cp) {
 /// only meaningful for stations flagged as `pop == 'autoroute'`.
 String? extractHighway(String? adresse) {
   if (adresse == null || adresse.isEmpty) return null;
-  final withA = RegExp(r'\bA[\s-]?(\d{1,3})(?!\d)', caseSensitive: false).firstMatch(adresse);
+  final withA = RegExp(
+    r'\bA[\s-]?(\d{1,3})(?!\d)',
+    caseSensitive: false,
+  ).firstMatch(adresse);
   if (withA != null) return 'A${withA.group(1)}';
-  final spelled = RegExp(r'\bAUTOROUTE\s+(\d{1,3})\b', caseSensitive: false).firstMatch(adresse);
+  final spelled = RegExp(
+    r'\bAUTOROUTE\s+(\d{1,3})\b',
+    caseSensitive: false,
+  ).firstMatch(adresse);
   if (spelled != null) return 'A${spelled.group(1)}';
   return null;
 }
