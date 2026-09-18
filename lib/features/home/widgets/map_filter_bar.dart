@@ -203,7 +203,7 @@ class _FuelChip extends ConsumerWidget {
   }
 
   void _pickFuel(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
@@ -278,7 +278,7 @@ class _BrandChip extends ConsumerWidget {
         (brandsAsync.valueOrNull ?? const []).map((b) => b.brand).toSet().toList()
           ..sort();
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
@@ -357,7 +357,7 @@ class _AutorouteChip extends ConsumerWidget {
   void _pickHighway(BuildContext context, WidgetRef ref) {
     final highways = ref.read(autoroutesListProvider);
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -447,7 +447,7 @@ class _ServiceChip extends ConsumerWidget {
     final services =
         stations.expand((s) => s.services).toSet().toList()..sort();
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -539,7 +539,7 @@ class _DepartmentChip extends ConsumerWidget {
   }
 
   void _pickDepartment(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -654,7 +654,7 @@ class _PlugTypeChip extends ConsumerWidget {
   }
 
   void _pickPlugType(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
@@ -718,7 +718,7 @@ class _EvNetworkChip extends ConsumerWidget {
         evStations.map((e) => e.network).where((n) => n.isNotEmpty).toSet().toList()
           ..sort();
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
@@ -865,3 +865,4 @@ class _Pill extends StatelessWidget {
     );
   }
 }
+

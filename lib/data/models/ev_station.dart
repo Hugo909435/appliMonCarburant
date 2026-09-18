@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 /// A public EV charging station, grouped from one or more individual
 /// charge points (`id_station_itinerance`) in the IRVE consolidated feed.
 class EvStation {
@@ -67,6 +69,22 @@ class EvStation {
           .contains('accessible'),
     );
   }
+
+  double distanceKmTo(double lat2, double lng2) {
+    const r = 6371.0;
+    final dLat = _deg2rad(lat2 - lat);
+    final dLng = _deg2rad(lng2 - lng);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_deg2rad(lat)) *
+            math.cos(_deg2rad(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return r * c;
+  }
+
+  static double _deg2rad(double deg) => deg * (math.pi / 180.0);
 
   static bool _isTrue(dynamic v) =>
       v.toString().trim().toLowerCase() == 'true';

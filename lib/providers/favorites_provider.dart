@@ -16,8 +16,11 @@ final favoritesServiceProvider = Provider<FavoritesService>((ref) {
 class FavoritesNotifier extends AsyncNotifier<Set<String>> {
   // Guards the one-time upload of pre-existing local favorites into a user's
   // new Firestore doc, so it never re-runs and resurrects favorites the user
-  // deliberately cleared from the cloud afterwards.
-  static const _migratedKey = 'favorites_migrated_v1';
+  // deliberately cleared from the cloud afterwards. Scoped per uid so that
+  // switching accounts on the same device still migrates the new account's
+  // local favorites instead of being skipped because a *different* user
+  // already migrated once.
+  static String _migratedKey(String uid) => 'favorites_migrated_v1_$uid';
 
   @override
   Future<Set<String>> build() async {
@@ -32,11 +35,12 @@ class FavoritesNotifier extends AsyncNotifier<Set<String>> {
     FirestoreFavoritesService service,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final alreadyMigrated = prefs.getBool(_migratedKey) ?? false;
+    final migratedKey = _migratedKey(service.uid);
+    final alreadyMigrated = prefs.getBool(migratedKey) ?? false;
     final remote = await service.load();
     if (alreadyMigrated) return remote;
 
-    await prefs.setBool(_migratedKey, true);
+    await prefs.setBool(migratedKey, true);
     final local = await LocalFavoritesService().load();
     if (local.isEmpty) return remote;
 
@@ -46,11 +50,19 @@ class FavoritesNotifier extends AsyncNotifier<Set<String>> {
   }
 
   Future<void> toggle(String stationId) async {
-    final current = state.valueOrNull ?? <String>{};
-    final updated = {...current};
+    final previous = state.valueOrNull ?? <String>{};
+    final updated = {...previous};
     if (!updated.remove(stationId)) updated.add(stationId);
     state = AsyncData(updated);
-    await ref.read(favoritesServiceProvider).save(updated);
+    try {
+      await ref.read(favoritesServiceProvider).save(updated);
+    } catch (_) {
+      // Persist failed (offline, permissions, ...): roll back the optimistic
+      // update instead of leaving the UI showing a favorite that never made
+      // it to storage. Callers invoke this fire-and-forget from onTap, so
+      // there's no one to rethrow to.
+      if (state.valueOrNull == updated) state = AsyncData(previous);
+    }
   }
 
   bool isFavorite(String stationId) =>

@@ -52,14 +52,17 @@ class StationsNotifier extends AsyncNotifier<List<Station>> {
       await _recordHistory(stations);
       return stations;
     } catch (err, stack) {
-      // Keep showing whatever we had before if the refresh fails.
+      // Keep showing whatever we had before if the refresh fails. No
+      // rethrow: build() invokes this via unawaited() for a silent
+      // background refresh, so an uncaught error would otherwise surface
+      // even though we've already degraded gracefully above.
       final previous = state.valueOrNull;
       if (previous != null) {
         state = AsyncData(previous);
-      } else {
-        state = AsyncError(err, stack);
+        return previous;
       }
-      rethrow;
+      state = AsyncError(err, stack);
+      return const [];
     }
   }
 

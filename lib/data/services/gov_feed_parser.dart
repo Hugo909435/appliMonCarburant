@@ -29,8 +29,9 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
 
     final latRaw = double.tryParse(pdv.getAttribute('latitude') ?? '');
     final lngRaw = double.tryParse(pdv.getAttribute('longitude') ?? '');
-    if (latRaw == null || lngRaw == null || latRaw == 0 || lngRaw == 0)
+    if (latRaw == null || lngRaw == null || latRaw == 0 || lngRaw == 0) {
       continue;
+    }
     final lat = latRaw / 100000;
     final lng = lngRaw / 100000;
 
