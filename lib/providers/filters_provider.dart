@@ -31,6 +31,10 @@ final selectedBrandProvider = StateProvider<String?>((ref) => null);
 /// Show only stations already saved as favorites.
 final favoritesOnlyProvider = StateProvider<bool>((ref) => false);
 
+/// Restrict fuel stations to those offering a given service (e.g.
+/// "Lavage"), or null for no filter.
+final selectedServiceProvider = StateProvider<String?>((ref) => null);
+
 /// Restrict EV chargers to a single plug type (e.g. "Combo CCS"), or null
 /// for no filter.
 final plugTypeFilterProvider = StateProvider<String?>((ref) => null);

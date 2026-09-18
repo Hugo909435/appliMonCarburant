@@ -20,6 +20,7 @@ class _FilterColors {
   static const autoroute = Color(0xFF1E88E5);
   static const departement = Color(0xFF00897B);
   static const favoris = Color(0xFFFFB300);
+  static const service = Color(0xFF6D4C41);
   static const plugType = Color(0xFF1E6FA8);
   static const fastCharge = Color(0xFFFFA000);
   static const evFree = Color(0xFF43A047);
@@ -94,6 +95,8 @@ class MapFilterBar extends ConsumerWidget {
               const _DepartmentChip(),
               const SizedBox(width: 8),
               const _AutorouteChip(),
+              const SizedBox(width: 8),
+              const _ServiceChip(),
               const SizedBox(width: 8),
               const _FavoritesChip(),
             ],
@@ -410,6 +413,81 @@ class _AutorouteChip extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends ConsumerWidget {
+  const _ServiceChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(selectedServiceProvider);
+    return _Pill(
+      selected: service != null,
+      icon: Icons.room_service_rounded,
+      iconColor: _FilterColors.service,
+      label: service ?? 'Service',
+      trailing: service != null
+          ? GestureDetector(
+              onTap: () => ref.read(selectedServiceProvider.notifier).state = null,
+              child: const Icon(Icons.close_rounded, size: 15),
+            )
+          : null,
+      onTap: () => _pickService(context, ref),
+    );
+  }
+
+  void _pickService(BuildContext context, WidgetRef ref) {
+    final stations = ref.read(stationsProvider).valueOrNull ?? const [];
+    final services =
+        stations.expand((s) => s.services).toSet().toList()..sort();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Service proposé', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              if (services.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Aucun service référencé.'),
+                )
+              else
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final s in services)
+                          ChoiceChip(
+                            label: Text(s),
+                            selected: s == ref.read(selectedServiceProvider),
+                            onSelected: (_) {
+                              ref.read(selectedServiceProvider.notifier).state = s;
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

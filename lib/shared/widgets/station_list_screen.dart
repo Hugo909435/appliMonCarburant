@@ -25,11 +25,15 @@ class StationListScreen extends ConsumerWidget {
     this.defaultSort = StationSort.price,
     this.emptyMessage = 'Aucune station trouvée.',
     this.appBarActions,
+    this.banner,
   });
 
   final String title;
   final List<Station> stations;
   final List<Widget>? appBarActions;
+
+  /// Optional banner shown right below the app bar (e.g. a warning or tip).
+  final Widget? banner;
 
   /// Optional station.id -> distance in km, enables sort-by-distance and
   /// shows the distance in each row.
@@ -65,6 +69,7 @@ class StationListScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(title), actions: appBarActions),
       body: Column(
         children: [
+          ?banner,
           const SizedBox(height: 12),
           const FuelSelector(),
           const SizedBox(height: 14),

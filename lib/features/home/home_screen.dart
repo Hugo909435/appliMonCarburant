@@ -411,6 +411,7 @@ class _StationMarkersLayer extends ConsumerWidget {
     final highwayFilter = ref.watch(highwayFilterProvider);
     final dep = ref.watch(departmentFilterProvider);
     final favoritesOnly = ref.watch(favoritesOnlyProvider);
+    final selectedService = ref.watch(selectedServiceProvider);
     final favoriteIds =
         ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
     final brandEnabled = ref.watch(brandFilterEnabledProvider);
@@ -428,6 +429,10 @@ class _StationMarkersLayer extends ConsumerWidget {
     if (dep != null) stations = stations.where((s) => s.dep == dep).toList();
     if (favoritesOnly) {
       stations = stations.where((s) => favoriteIds.contains(s.id)).toList();
+    }
+    if (selectedService != null) {
+      stations =
+          stations.where((s) => s.services.contains(selectedService)).toList();
     }
 
     final brandByStation = <String, String>{};
