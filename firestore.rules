@@ -4,5 +4,14 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Annonces pilotées à distance (bandeau « prix coûtant ») : contenu
+    // public, lisible par tous, y compris avant la connexion anonyme.
+    // L'écriture se fait uniquement depuis la console Firebase, jamais
+    // depuis l'app — d'où le refus systématique côté client.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
