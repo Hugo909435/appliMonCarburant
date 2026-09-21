@@ -9,7 +9,6 @@ import 'package:latlong2/latlong.dart' as ll;
 
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
-import '../../core/utils/formatters.dart';
 import '../../data/models/ev_station.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
@@ -37,8 +36,6 @@ const _detailZoomThreshold = 12.0;
 /// How far past the visible viewport (as a fraction of its span) to keep
 /// building station markers, so panning doesn't cause markers to pop in.
 const _viewportPadding = 0.3;
-
-enum _ViewMode { map, list }
 
 enum _SearchKind { station, address }
 
@@ -80,7 +77,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _searchToken = 0;
   List<_SearchHit> _results = [];
   bool _searching = false;
-  _ViewMode _viewMode = _ViewMode.map;
 
   @override
   void dispose() {
@@ -208,12 +204,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  void _toggleViewMode() {
-    setState(() {
-      _viewMode = _viewMode == _ViewMode.map ? _ViewMode.list : _ViewMode.map;
-    });
-  }
-
   Future<void> _locateMe() async {
     await ref.read(userLocationProvider.notifier).requestLocation();
     if (!mounted) return;
@@ -226,9 +216,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           14,
         );
       },
-      error: (err, _) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(err.toString()))),
+      error: (err, _) =>
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(err.toString()))),
       loading: () {},
     );
   }
@@ -254,70 +244,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             searching: _searching,
             results: _results,
             locationLoading: locationLoading,
-            viewMode: _viewMode,
             onQueryChanged: _onQueryChanged,
             onClearSearch: _clearSearch,
             onSelectResult: _selectResult,
             onLocate: _locateMe,
             onAccount: () => context.push('/compte'),
-            onToggleViewMode: _toggleViewMode,
           ),
           Expanded(
             child: Stack(
               children: [
-                if (_viewMode == _ViewMode.map)
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: position != null
-                          ? ll.LatLng(position.latitude, position.longitude)
-                          : HomeScreen._franceCenter,
-                      initialZoom: position != null ? 12 : 5.5,
-                      onTap: (_, _) => _dismissResults(),
-                      onPositionChanged: _onPositionChanged,
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: position != null
+                        ? ll.LatLng(position.latitude, position.longitude)
+                        : HomeScreen._franceCenter,
+                    initialZoom: position != null ? 12 : 5.5,
+                    onTap: (_, _) => _dismissResults(),
+                    onPositionChanged: _onPositionChanged,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName:
+                          'com.moncarburant.mon_carburant_app',
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName:
-                            'com.moncarburant.mon_carburant_app',
-                      ),
-                      if (layer == MapLayer.stations)
-                        const _StationMarkersLayer()
-                      else if (layer == MapLayer.bornes)
-                        const _EvMarkersLayer(),
-                      if (position != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: ll.LatLng(
-                                position.latitude,
-                                position.longitude,
-                              ),
-                              width: 24,
-                              height: 24,
-                              child: const Icon(
-                                Icons.my_location,
-                                color: Colors.blue,
-                              ),
+                    if (layer == MapLayer.stations)
+                      const _StationMarkersLayer()
+                    else if (layer == MapLayer.bornes)
+                      const _EvMarkersLayer(),
+                    if (position != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: ll.LatLng(
+                              position.latitude,
+                              position.longitude,
                             ),
-                          ],
-                        ),
-                      RichAttributionWidget(
-                        alignment: AttributionAlignment.bottomLeft,
-                        attributions: [
-                          const TextSourceAttribution(
-                            '© OpenStreetMap contributors',
+                            width: 24,
+                            height: 24,
+                            child: const Icon(
+                              Icons.my_location,
+                              color: Colors.blue,
+                            ),
                           ),
-                          if (layer == MapLayer.bornes)
-                            const TextSourceAttribution('IRVE · data.gouv.fr'),
                         ],
                       ),
-                    ],
-                  )
-                else
-                  const _MapListView(),
+                    RichAttributionWidget(
+                      alignment: AttributionAlignment.bottomLeft,
+                      attributions: [
+                        const TextSourceAttribution(
+                          '© OpenStreetMap contributors',
+                        ),
+                        if (layer == MapLayer.bornes)
+                          const TextSourceAttribution('IRVE · data.gouv.fr'),
+                      ],
+                    ),
+                  ],
+                ),
                 if (comparisonCount > 0)
                   Positioned(
                     right: 16,
@@ -359,13 +344,11 @@ class _TopBar extends StatelessWidget {
     required this.searching,
     required this.results,
     required this.locationLoading,
-    required this.viewMode,
     required this.onQueryChanged,
     required this.onClearSearch,
     required this.onSelectResult,
     required this.onLocate,
     required this.onAccount,
-    required this.onToggleViewMode,
   });
 
   final TextEditingController searchController;
@@ -373,13 +356,11 @@ class _TopBar extends StatelessWidget {
   final bool searching;
   final List<_SearchHit> results;
   final bool locationLoading;
-  final _ViewMode viewMode;
   final ValueChanged<String> onQueryChanged;
   final VoidCallback onClearSearch;
   final ValueChanged<_SearchHit> onSelectResult;
   final VoidCallback onLocate;
   final VoidCallback onAccount;
-  final VoidCallback onToggleViewMode;
 
   @override
   Widget build(BuildContext context) {
@@ -403,13 +384,6 @@ class _TopBar extends StatelessWidget {
                       onChanged: onQueryChanged,
                       onClear: onClearSearch,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  _RoundIconButton(
-                    icon: viewMode == _ViewMode.map
-                        ? Icons.view_list_rounded
-                        : Icons.map_rounded,
-                    onTap: onToggleViewMode,
                   ),
                   const SizedBox(width: 8),
                   _RoundIconButton(
@@ -510,7 +484,10 @@ class _StationMarkersLayer extends ConsumerWidget {
           backgroundColor: AppColors.primary,
           child: Text(
             '${markers.length}',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -545,7 +522,10 @@ class _EvMarkersLayer extends ConsumerWidget {
           backgroundColor: const Color(0xFF2F8F5B),
           child: Text(
             '${markers.length}',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -665,295 +645,6 @@ class _EvMarker extends StatelessWidget {
           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
         ),
         child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
-      ),
-    );
-  }
-}
-
-/// The list alternative to the map, for when there are too many stations on
-/// screen to make sense of visually — sorted cheapest-first (or, for
-/// chargers, most powerful first) instead of spatially.
-class _MapListView extends ConsumerWidget {
-  const _MapListView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final layer = ref.watch(mapLayerProvider);
-    return layer == MapLayer.bornes
-        ? const _EvListView()
-        : const _StationListView();
-  }
-}
-
-class _StationListView extends ConsumerWidget {
-  const _StationListView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stations = ref.watch(filteredStationsProvider);
-    final fuel = ref.watch(selectedFuelProvider);
-    final favoriteIds =
-        ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
-    final position = ref.watch(userLocationProvider).valueOrNull;
-
-    final sorted = [...stations]..sort((a, b) {
-      final priceA = a.prices[fuel.code];
-      final priceB = b.prices[fuel.code];
-      if (priceA == null && priceB == null) return 0;
-      if (priceA == null) return 1;
-      if (priceB == null) return -1;
-      return priceA.compareTo(priceB);
-    });
-
-    if (sorted.isEmpty) {
-      return const _EmptyListState(
-        message: 'Aucune station ne correspond à ces filtres.',
-      );
-    }
-
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-        itemCount: sorted.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final station = sorted[index];
-          final distanceKm = position != null
-              ? station.distanceKmTo(position.latitude, position.longitude)
-              : null;
-          return _StationListTile(
-            station: station,
-            fuel: fuel,
-            distanceKm: distanceKm,
-            isFavorite: favoriteIds.contains(station.id),
-            onTap: () => showStationSheet(context, station),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _EvListView extends ConsumerWidget {
-  const _EvListView();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final evStations = ref.watch(filteredEvStationsProvider);
-    final position = ref.watch(userLocationProvider).valueOrNull;
-
-    final sorted = [...evStations];
-    if (position != null) {
-      sorted.sort((a, b) {
-        final distA = a.distanceKmTo(position.latitude, position.longitude);
-        final distB = b.distanceKmTo(position.latitude, position.longitude);
-        return distA.compareTo(distB);
-      });
-    } else {
-      sorted.sort((a, b) => b.maxPowerKw.compareTo(a.maxPowerKw));
-    }
-
-    if (sorted.isEmpty) {
-      return const _EmptyListState(
-        message: 'Aucune borne ne correspond à ces filtres sur cette zone.',
-      );
-    }
-
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-        itemCount: sorted.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final ev = sorted[index];
-          final distanceKm = position != null
-              ? ev.distanceKmTo(position.latitude, position.longitude)
-              : null;
-          return _EvListTile(
-            station: ev,
-            distanceKm: distanceKm,
-            onTap: () => showEvStationSheet(context, ev),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _StationListTile extends StatelessWidget {
-  const _StationListTile({
-    required this.station,
-    required this.fuel,
-    required this.distanceKm,
-    required this.isFavorite,
-    required this.onTap,
-  });
-
-  final Station station;
-  final FuelType fuel;
-  final double? distanceKm;
-  final bool isFavorite;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final subtleColor = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.6);
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              PriceTotem(price: station.prices[fuel.code], accentColor: fuel.color),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      station.ville,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      station.adresse,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: subtleColor),
-                    ),
-                    if (distanceKm != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        formatDistance(distanceKm!),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (isFavorite)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.star_rounded, color: AppColors.accent),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EvListTile extends StatelessWidget {
-  const _EvListTile({
-    required this.station,
-    required this.distanceKm,
-    required this.onTap,
-  });
-
-  final EvStation station;
-  final double? distanceKm;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final subtleColor = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.6);
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2F8F5B),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.bolt_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      station.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${station.network} · ${station.maxPowerKw.toStringAsFixed(0)} kW',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: subtleColor),
-                    ),
-                    if (distanceKm != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        formatDistance(distanceKm!),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (station.free)
-                const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.money_off_rounded, color: Color(0xFF43A047)),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyListState extends StatelessWidget {
-  const _EmptyListState({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Theme.of(context).colorScheme.surface,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
-      child: Text(
-        message,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
       ),
     );
   }
