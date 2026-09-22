@@ -1,0 +1,17 @@
+Logos d'enseignes
+
+Un PNG carré 256x256 par enseigne, nommé d'après sa clé (voir
+lib/core/brands/brand_catalog.dart). Une enseigne sans fichier ici
+s'affiche sous forme de badge à ses couleurs (c'est le cas d'ecomarche).
+
+Sources (septembre 2026) :
+- icône officielle du site de l'enseigne : totalenergies, bp, carrefour,
+  systemeu, auchan, shell, avia, eni
+- Wikimedia Commons (via la propriété « logo » de Wikidata) : leclerc,
+  intermarche, esso, colruyt, netto, cora, casino, dyneff, spar, vito, elan
+
+Ces logos sont des marques déposées de leurs propriétaires, utilisées
+uniquement pour identifier l'enseigne de chaque station.
+
+Pour en ajouter ou en remplacer un : déposer <clé>.png ici, puis faire un
+hot restart (le hot reload ne suffit pas).

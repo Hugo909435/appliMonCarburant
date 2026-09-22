@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
 import '../../providers/favorites_provider.dart';
+import 'brand_logo.dart';
 import 'price_totem.dart';
 
 class StationListTile extends ConsumerWidget {
@@ -15,12 +16,16 @@ class StationListTile extends ConsumerWidget {
     required this.station,
     required this.fuel,
     this.distanceKm,
+    this.footer,
     required this.onTap,
   });
 
   final Station station;
   final FuelType fuel;
   final double? distanceKm;
+
+  /// Optional extra line under the address (e.g. the real cost of a fill-up).
+  final Widget? footer;
   final VoidCallback onTap;
 
   @override
@@ -50,6 +55,12 @@ class StationListTile extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
+              StationBrandLogo(
+                stationId: station.id,
+                size: 34,
+                placeholder: const SizedBox(width: 34),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,6 +87,7 @@ class StationListTile extends ConsumerWidget {
                         fontSize: 12.5,
                       ),
                     ),
+                    if (footer != null) ...[const SizedBox(height: 4), footer!],
                   ],
                 ),
               ),

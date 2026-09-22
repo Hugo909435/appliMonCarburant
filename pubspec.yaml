@@ -104,6 +104,10 @@ flutter:
   assets:
     - assets/data/departments.json
     - assets/data/sample_stations.json
+    # Enseigne de chaque station (générée par tool/build_station_brands.dart)
+    - assets/data/station_brands.json
+    # Logos officiels optionnels : <clé>.png (voir lib/core/brands/brand_catalog.dart)
+    - assets/logos/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

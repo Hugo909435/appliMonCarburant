@@ -11,8 +11,10 @@ import '../features/groups/regions_list_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/national/national_price_screen.dart';
 import '../features/nearby/nearby_screen.dart';
+import '../features/route/route_screen.dart';
 import '../features/search/search_results_screen.dart';
 import '../features/station_detail/station_detail_screen.dart';
+import '../features/vehicle/vehicle_screen.dart';
 import '../providers/stats_provider.dart';
 import '../shared/widgets/main_shell.dart';
 
@@ -49,6 +51,16 @@ final appRouter = GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       path: '/compte',
       builder: (context, state) => const AccountScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/vehicule',
+      builder: (context, state) => const VehicleScreen(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: '/trajet',
+      builder: (context, state) => const RouteScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

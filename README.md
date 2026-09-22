@@ -17,8 +17,18 @@ même que celui utilisé par le site. Le téléchargement (ZIP) et le parsing
 mise en cache locale pour un démarrage instantané.
 
 Le flux officiel ne contient pas l'enseigne (Total, Leclerc, etc.) par
-station : le site l'obtient via un script séparé qui n'est pas disponible
-ici. Le filtre par enseigne n'est donc pas présent dans cette v1.
+station. Elle est déduite d'OpenStreetMap par un script, et le résultat est
+embarqué dans l'app (`assets/data/station_brands.json`, ~80 % des
+stations). À relancer avant chaque publication pour suivre les nouvelles
+stations :
+
+```bash
+dart run tool/build_station_brands.dart
+```
+
+Les logos officiels (`assets/logos/`, 19 enseignes) s'affichent sur la carte,
+les listes et les fiches ; les autres enseignes ont un badge à leurs couleurs
+(sources et ajout d'un logo : `assets/logos/LISEZMOI.txt`).
 
 ## Démarrer
 
@@ -46,3 +56,10 @@ lib/
 
 Le code cible iOS dès le départ mais n'a pas été compilé/testé (nécessite un
 Mac avec Xcode).
+
+## Itinéraire
+
+« Plein sur mon trajet » utilise le serveur de démo public d'OSRM
+(`lib/data/services/routing_service.dart`), qui ne tolère pas un usage
+intensif : à remplacer par une instance auto-hébergée avant une mise en
+production à grande échelle.

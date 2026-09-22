@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../providers/auth_provider.dart';
@@ -71,14 +72,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compte')),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: isLinked
-              ? _linkedContent(context, user)
-              : _signInContent(context),
-        ),
+        children: [
+          ...isLinked ? _linkedContent(context, user) : _signInContent(context),
+          const SizedBox(height: 32),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.directions_car_outlined),
+            title: const Text('Mon véhicule'),
+            subtitle: const Text('Consommation et taille du plein'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/vehicule'),
+          ),
+        ],
       ),
     );
   }

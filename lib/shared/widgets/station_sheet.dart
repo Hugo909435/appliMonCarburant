@@ -10,6 +10,9 @@ import '../../data/models/station.dart';
 import '../../providers/comparison_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/location_provider.dart';
+import '../../providers/station_brands_provider.dart';
+import 'brand_logo.dart';
+import 'fill_cost_card.dart';
 import 'price_totem.dart';
 
 /// Opens the expandable "station card" sheet: all fuel prices, services,
@@ -24,8 +27,10 @@ Future<void> showStationSheet(BuildContext context, Station station) {
       minChildSize: 0.3,
       maxChildSize: 0.92,
       expand: false,
-      builder: (context, scrollController) =>
-          _StationSheetContent(station: station, scrollController: scrollController),
+      builder: (context, scrollController) => _StationSheetContent(
+        station: station,
+        scrollController: scrollController,
+      ),
     ),
   );
 }
@@ -68,6 +73,7 @@ class _StationSheetContent extends ConsumerWidget {
         ? null
         : station.distanceKmTo(position.latitude, position.longitude);
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final brand = ref.watch(stationBrandProvider(station.id));
 
     return Container(
       decoration: BoxDecoration(
@@ -94,17 +100,29 @@ class _StationSheetContent extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              StationBrandLogo(stationId: station.id, size: 44),
+              if (brand != null) const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (brand != null)
+                      Text(
+                        brand.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
                     Text(
                       station.ville,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     Text(
                       station.adresse,
-                      style: TextStyle(color: onSurface.withValues(alpha: 0.65)),
+                      style: TextStyle(
+                        color: onSurface.withValues(alpha: 0.65),
+                      ),
                     ),
                     Text(
                       [
@@ -155,7 +173,10 @@ class _StationSheetContent extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          Text('Prix des carburants', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Prix des carburants',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 10),
           Card(
             child: Padding(
@@ -183,7 +204,9 @@ class _StationSheetContent extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 fuel.label,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             PriceTotem(
@@ -207,9 +230,16 @@ class _StationSheetContent extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 8, left: 4),
             child: Text(
               'Dernière mise à jour : ${formatRelativeDate(station.lastUpdate)}',
-              style: TextStyle(color: onSurface.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(
+                color: onSurface.withValues(alpha: 0.5),
+                fontSize: 12,
+              ),
             ),
           ),
+          if (distance != null) ...[
+            const SizedBox(height: 12),
+            FillCostCard(station: station, distanceKm: distance),
+          ],
           if (station.horaires != null || station.automate) ...[
             const SizedBox(height: 24),
             Text('Horaires', style: Theme.of(context).textTheme.titleMedium),

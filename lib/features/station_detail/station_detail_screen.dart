@@ -9,7 +9,10 @@ import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/location_provider.dart';
+import '../../providers/station_brands_provider.dart';
 import '../../providers/stations_provider.dart';
+import '../../shared/widgets/brand_logo.dart';
+import '../../shared/widgets/fill_cost_card.dart';
 import '../../shared/widgets/price_totem.dart';
 
 class StationDetailScreen extends ConsumerWidget {
@@ -40,6 +43,7 @@ class StationDetailScreen extends ConsumerWidget {
         ? null
         : station.distanceKmTo(position.latitude, position.longitude);
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final brand = ref.watch(stationBrandProvider(station.id));
 
     return Scaffold(
       appBar: AppBar(
@@ -60,18 +64,22 @@ class StationDetailScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Icon(
-                  station.isAutoroute
-                      ? Icons.local_gas_station_rounded
-                      : Icons.local_gas_station_outlined,
-                  color: AppColors.primary,
+              StationBrandLogo(
+                stationId: station.id,
+                size: 44,
+                placeholder: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(
+                    station.isAutoroute
+                        ? Icons.local_gas_station_rounded
+                        : Icons.local_gas_station_outlined,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -79,6 +87,14 @@ class StationDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (brand != null)
+                      Text(
+                        brand.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
                     Text(
                       station.ville,
                       style: Theme.of(context).textTheme.titleLarge,
@@ -174,6 +190,10 @@ class StationDetailScreen extends ConsumerWidget {
               ),
             ),
           ),
+          if (distance != null) ...[
+            const SizedBox(height: 12),
+            FillCostCard(station: station, distanceKm: distance),
+          ],
           if (station.horaires != null) ...[
             const SizedBox(height: 28),
             Text('Horaires', style: Theme.of(context).textTheme.titleMedium),

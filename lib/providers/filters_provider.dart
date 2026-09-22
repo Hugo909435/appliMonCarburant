@@ -21,11 +21,8 @@ final highwayFilterProvider = StateProvider<String?>((ref) => null);
 /// Restrict fuel stations to a single département (num, e.g. "75").
 final departmentFilterProvider = StateProvider<String?>((ref) => null);
 
-/// Whether brand badges (fetched from OpenStreetMap) are shown/used to
-/// filter markers on the map.
-final brandFilterEnabledProvider = StateProvider<bool>((ref) => false);
-
-/// A single brand name selected to filter markers to, or null for all.
+/// A single brand key (see brand_rules.dart) to filter markers to, or
+/// null for all.
 final selectedBrandProvider = StateProvider<String?>((ref) => null);
 
 /// Show only stations already saved as favorites.

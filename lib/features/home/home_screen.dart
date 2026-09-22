@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
 
+import '../../core/brands/brand_catalog.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
 import '../../data/models/ev_station.dart';
@@ -21,7 +22,7 @@ import '../../providers/location_provider.dart';
 import '../../providers/map_viewport_provider.dart';
 import '../../providers/station_brands_provider.dart';
 import '../../providers/stations_provider.dart';
-import '../../shared/widgets/brand_badge.dart';
+import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/price_totem.dart';
 import '../../shared/widgets/station_sheet.dart';
 import 'widgets/ev_station_sheet.dart';
@@ -248,6 +249,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onClearSearch: _clearSearch,
             onSelectResult: _selectResult,
             onLocate: _locateMe,
+            onRoute: () => context.push('/trajet'),
             onAccount: () => context.push('/compte'),
           ),
           Expanded(
@@ -303,6 +305,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
+                if (position != null)
+                  Positioned(
+                    left: 12,
+                    top: 12,
+                    child: ActionChip(
+                      avatar: const Icon(Icons.savings_outlined, size: 18),
+                      label: const Text('Le plus rentable autour de moi'),
+                      backgroundColor: Colors.white,
+                      elevation: 3,
+                      onPressed: () => context.push('/pres-de-moi'),
+                    ),
+                  ),
                 if (comparisonCount > 0)
                   Positioned(
                     right: 16,
@@ -348,6 +362,7 @@ class _TopBar extends StatelessWidget {
     required this.onClearSearch,
     required this.onSelectResult,
     required this.onLocate,
+    required this.onRoute,
     required this.onAccount,
   });
 
@@ -360,6 +375,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onClearSearch;
   final ValueChanged<_SearchHit> onSelectResult;
   final VoidCallback onLocate;
+  final VoidCallback onRoute;
   final VoidCallback onAccount;
 
   @override
@@ -393,6 +409,11 @@ class _TopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   _RoundIconButton(
+                    icon: Icons.alt_route_rounded,
+                    onTap: onRoute,
+                  ),
+                  const SizedBox(width: 8),
+                  _RoundIconButton(
                     icon: Icons.person_rounded,
                     onTap: onAccount,
                   ),
@@ -419,8 +440,10 @@ class _StationMarkersLayer extends ConsumerWidget {
     final fuel = ref.watch(selectedFuelProvider);
     final favoriteIds =
         ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
-    final brandEnabled = ref.watch(brandFilterEnabledProvider);
     final selectedBrand = ref.watch(selectedBrandProvider);
+    final brands =
+        ref.watch(stationBrandsProvider).valueOrNull ??
+        const <String, FuelBrand>{};
     final bounds = ref.watch(mapBoundsProvider);
     final zoom = ref.watch(mapZoomProvider);
 
@@ -440,14 +463,10 @@ class _StationMarkersLayer extends ConsumerWidget {
           .toList();
     }
 
-    var brandByStation = const <String, String>{};
-    if (brandEnabled && bounds != null) {
-      brandByStation = ref.watch(stationBrandMatchesProvider);
-      if (selectedBrand != null) {
-        stations = stations
-            .where((s) => brandByStation[s.id] == selectedBrand)
-            .toList();
-      }
+    if (selectedBrand != null) {
+      stations = stations
+          .where((s) => brands[s.id]?.key == selectedBrand)
+          .toList();
     }
 
     // Zoomed out over a region/the whole country: full price totems would
@@ -469,7 +488,7 @@ class _StationMarkersLayer extends ConsumerWidget {
                   ? _StationMarker(
                       station: station,
                       fuel: fuel,
-                      brand: brandByStation[station.id],
+                      brand: brands[station.id],
                       isFavorite: favoriteIds.contains(station.id),
                       onTap: () => showStationSheet(context, station),
                     )
@@ -579,7 +598,7 @@ class _StationMarker extends StatelessWidget {
 
   final Station station;
   final FuelType fuel;
-  final String? brand;
+  final FuelBrand? brand;
   final bool isFavorite;
   final VoidCallback onTap;
 
@@ -598,9 +617,9 @@ class _StationMarker extends StatelessWidget {
           ),
           if (brand != null)
             Positioned(
-              top: -6,
-              right: 4,
-              child: BrandBadge(brand: brand!, size: 16),
+              top: -8,
+              right: 0,
+              child: BrandLogo(brand: brand!, size: 22),
             ),
           if (isFavorite)
             const Positioned(

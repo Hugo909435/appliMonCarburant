@@ -16,6 +16,11 @@ class AppColors {
   static const backgroundDark = Color(0xFF000000);
   static const surfaceDark = Color(0xFF161616);
   static const outlineDark = Color(0xFF2E2E2E);
+
+  /// Functional exceptions too: "cheaper / dearer than usual" signals must
+  /// read as good or bad news at a glance.
+  static const good = Color(0xFF1F8A4C);
+  static const bad = Color(0xFFC0392B);
 }
 
 /// Border radii shared by "sign plate" surfaces across the app.

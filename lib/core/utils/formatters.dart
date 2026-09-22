@@ -3,6 +3,9 @@ String formatPrice(double? price) {
   return '${price.toStringAsFixed(3).replaceFirst('.', ',')} €';
 }
 
+String formatEuros(double amount) =>
+    '${amount.toStringAsFixed(2).replaceFirst('.', ',')} €';
+
 String formatDistance(double km) {
   if (km < 1) return '${(km * 1000).round()} m';
   return '${km.toStringAsFixed(1).replaceFirst('.', ',')} km';

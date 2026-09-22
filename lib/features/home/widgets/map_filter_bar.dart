@@ -2,14 +2,17 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/brands/brand_catalog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/fuel_colors.dart';
 import '../../../data/models/fuel_type.dart';
 import '../../../providers/derived_providers.dart';
 import '../../../providers/ev_stations_provider.dart';
 import '../../../providers/filters_provider.dart';
+import '../../../providers/map_viewport_provider.dart';
 import '../../../providers/station_brands_provider.dart';
 import '../../../providers/stations_provider.dart';
+import '../../../shared/widgets/brand_logo.dart';
 
 /// Each filter's icon gets its own fixed color so it reads as a small
 /// "logo" at a glance — the chips themselves stay black/white.
@@ -245,83 +248,108 @@ class _BrandChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = ref.watch(brandFilterEnabledProvider);
-    final brand = ref.watch(selectedBrandProvider);
+    final brandKey = ref.watch(selectedBrandProvider);
+    final brand = brandKey == null ? null : brandForKey(brandKey);
 
     return _Pill(
-      selected: enabled,
+      selected: brand != null,
       icon: Icons.storefront_rounded,
       iconColor: _FilterColors.enseigne,
-      label: brand ?? 'Enseigne',
+      label: brand?.name ?? 'Enseigne',
       trailing: brand != null
           ? GestureDetector(
               onTap: () => ref.read(selectedBrandProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
-      onTap: () {
-        if (!enabled) {
-          ref.read(brandFilterEnabledProvider.notifier).state = true;
-        }
-        _pickBrand(context, ref);
-      },
-      onLongPress: () {
-        ref.read(brandFilterEnabledProvider.notifier).state = false;
-        ref.read(selectedBrandProvider.notifier).state = null;
-      },
+      onTap: () => _pickBrand(context, ref),
+      onLongPress: () => ref.read(selectedBrandProvider.notifier).state = null,
     );
   }
 
-  void _pickBrand(BuildContext context, WidgetRef ref) {
-    final brandsAsync = ref.read(stationBrandsProvider);
+  /// Brands of the stations currently on screen, most common first.
+  List<(FuelBrand, int)> _visibleBrands(WidgetRef ref) {
     final brands =
-        (brandsAsync.valueOrNull ?? const []).map((b) => b.brand).toSet().toList()
-          ..sort();
+        ref.read(stationBrandsProvider).valueOrNull ??
+        const <String, FuelBrand>{};
+    final bounds = ref.read(mapBoundsProvider);
+    final counts = <FuelBrand, int>{};
+    for (final s in ref.read(filteredStationsProvider)) {
+      if (bounds != null &&
+          (s.lat < bounds.south ||
+              s.lat > bounds.north ||
+              s.lng < bounds.west ||
+              s.lng > bounds.east)) {
+        continue;
+      }
+      final b = brands[s.id];
+      if (b != null) counts[b] = (counts[b] ?? 0) + 1;
+    }
+    return [for (final e in counts.entries) (e.key, e.value)]
+      ..sort((a, b) => b.$2.compareTo(a.$2));
+  }
+
+  void _pickBrand(BuildContext context, WidgetRef ref) {
+    final brands = _visibleBrands(ref);
+    final selected = ref.read(selectedBrandProvider);
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Enseigne visible ici', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                'D\'après OpenStreetMap, sur la zone affichée.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enseignes visibles ici',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-              const SizedBox(height: 12),
-              if (brands.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Aucune enseigne trouvée sur cette zone.'),
-                )
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final b in brands)
-                      ChoiceChip(
-                        label: Text(b),
-                        selected: b == ref.read(selectedBrandProvider),
-                        onSelected: (_) {
-                          ref.read(selectedBrandProvider.notifier).state = b;
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  "Enseignes d'après OpenStreetMap.",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.55),
+                  ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                if (brands.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('Aucune enseigne connue sur cette zone.'),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final (b, count) in brands)
+                        ChoiceChip(
+                          avatar: BrandLogo(brand: b, size: 22),
+                          label: Text('${b.name} ($count)'),
+                          selected: b.key == selected,
+                          onSelected: (_) {
+                            ref.read(selectedBrandProvider.notifier).state =
+                                b.key;
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
