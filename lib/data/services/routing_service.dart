@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../core/utils/route_corridor.dart';
+import '../../core/config/app_config.dart';
 
 class RouteResult {
   const RouteResult({
@@ -26,11 +27,10 @@ class RoutingException implements Exception {
 
 /// Driving itinerary backed by OSRM (OpenStreetMap data, no API key).
 ///
-/// The public demo server is fine for development and low traffic, but its
-/// usage policy forbids heavy production use: point [_baseUrl] at a
-/// self-hosted OSRM (or another provider) before a public launch.
+/// The server is [AppConfig.osrmBaseUrl]; see that class for why the public
+/// demo instance it defaults to must not ship in a published build.
 class RoutingService {
-  static const _baseUrl = 'https://router.project-osrm.org/route/v1/driving';
+  static const _baseUrl = AppConfig.osrmBaseUrl;
 
   Future<RouteResult> route(RoutePoint from, RoutePoint to) async {
     final uri = Uri.parse(
@@ -40,7 +40,7 @@ class RoutingService {
     final http.Response response;
     try {
       response = await http
-          .get(uri, headers: {'User-Agent': 'mon-carburant-app/1.0'})
+          .get(uri, headers: const {'User-Agent': AppConfig.userAgent})
           .timeout(const Duration(seconds: 15));
     } catch (_) {
       throw const RoutingException(

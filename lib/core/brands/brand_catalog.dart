@@ -111,12 +111,13 @@ const _catalog = {
     key: 'dyneff',
     name: 'Dyneff',
     short: 'DYN',
-    background: Color(0xFF0055A5),
+    // Rouge du logo : le bleu qui figurait ici n'appartient pas à l'enseigne.
+    background: Color(0xFFE52612),
   ),
   'casino': FuelBrand(
     key: 'casino',
     name: 'Casino',
-    short: 'Casino',
+    short: 'CAS',
     background: Color(0xFF009B48),
   ),
   'netto': FuelBrand(
@@ -142,7 +143,7 @@ const _catalog = {
   'colruyt': FuelBrand(
     key: 'colruyt',
     name: 'Colruyt',
-    short: 'C',
+    short: 'COL',
     background: Color(0xFFE30613),
   ),
   'vito': FuelBrand(

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- « Se connecter avec Apple ». La capacité doit aussi être cochée sur
+	     l'identifiant d'app dans le portail développeur Apple, sinon la
+	     signature échoue avec « provisioning profile doesn't support the
+	     Sign In with Apple capability ». -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../core/config/app_config.dart';
+
 /// A single address match returned by the geocoder.
 class GeocodingResult {
   const GeocodingResult({
@@ -18,7 +20,7 @@ class GeocodingResult {
 /// Free-text address search backed by Nominatim (OpenStreetMap), the same
 /// data source as the map tiles — no API key required.
 class GeocodingService {
-  static const _url = 'https://nominatim.openstreetmap.org/search';
+  static const _url = AppConfig.nominatimBaseUrl;
 
   Future<List<GeocodingResult>> search(String query) async {
     final trimmed = query.trim();
@@ -35,7 +37,7 @@ class GeocodingService {
     );
 
     final response = await http
-        .get(uri, headers: {'User-Agent': 'mon-carburant-app/1.0'})
+        .get(uri, headers: const {'User-Agent': AppConfig.userAgent})
         .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) return const [];
 

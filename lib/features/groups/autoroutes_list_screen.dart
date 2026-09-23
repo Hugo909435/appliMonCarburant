@@ -27,10 +27,7 @@ class AutoroutesListScreen extends ConsumerWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    leading: const Icon(
-                      Icons.route_outlined,
-                      color: AppColors.accent,
-                    ),
+                    leading: const Icon(Icons.route_outlined),
                     title: Text(
                       hw.code,
                       style: const TextStyle(fontWeight: FontWeight.w600),

@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/services/geocoding_service.dart';
+import '../../providers/map_search_provider.dart';
 
 /// A place picked as a route endpoint. [isMyLocation] marks the "Ma
 /// position" shortcut, resolved to GPS coordinates only when routing.
@@ -40,18 +42,17 @@ Future<PickedPlace?> showPlacePicker(
   );
 }
 
-class _PlacePicker extends StatefulWidget {
+class _PlacePicker extends ConsumerStatefulWidget {
   const _PlacePicker({required this.title, required this.offerMyLocation});
 
   final String title;
   final bool offerMyLocation;
 
   @override
-  State<_PlacePicker> createState() => _PlacePickerState();
+  ConsumerState<_PlacePicker> createState() => _PlacePickerState();
 }
 
-class _PlacePickerState extends State<_PlacePicker> {
-  final _geocoding = GeocodingService();
+class _PlacePickerState extends ConsumerState<_PlacePicker> {
   Timer? _debounce;
   int _token = 0;
   List<GeocodingResult> _results = const [];
@@ -80,7 +81,7 @@ class _PlacePickerState extends State<_PlacePicker> {
     setState(() => _loading = true);
     List<GeocodingResult> results;
     try {
-      results = await _geocoding.search(query);
+      results = await ref.read(geocodingServiceProvider).search(query);
     } catch (_) {
       results = const [];
     }

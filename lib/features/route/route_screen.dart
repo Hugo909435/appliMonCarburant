@@ -11,6 +11,7 @@ import '../../core/utils/route_corridor.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
 import '../../data/services/routing_service.dart';
+import '../../providers/routing_provider.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/stations_provider.dart';
@@ -18,6 +19,7 @@ import '../../providers/vehicle_provider.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/station_list_tile.dart';
 import '../../shared/widgets/station_sheet.dart';
+import '../../core/config/app_config.dart';
 import 'place_picker_sheet.dart';
 
 enum _RouteSort { realCost, alongRoute }
@@ -38,8 +40,6 @@ class RouteScreen extends ConsumerStatefulWidget {
 }
 
 class _RouteScreenState extends ConsumerState<RouteScreen> {
-  final _routing = RoutingService();
-
   PickedPlace _from = PickedPlace.myLocation;
   PickedPlace? _to;
   double _corridorKm = 2;
@@ -98,7 +98,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
           'une adresse de départ.',
         );
       }
-      final route = await _routing.route(a, b);
+      final route = await ref.read(routingServiceProvider).route(a, b);
       if (!mounted) return;
       setState(() {
         _route = route;
@@ -395,8 +395,8 @@ class _RouteMap extends StatelessWidget {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.moncarburant.mon_carburant_app',
+                urlTemplate: AppConfig.tileUrlTemplate,
+                userAgentPackageName: AppConfig.packageName,
               ),
               PolylineLayer(
                 polylines: [

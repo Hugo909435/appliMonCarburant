@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 
 import '../models/ev_station.dart';
 
+import '../../core/config/app_config.dart';
+
 /// Fetches public EV charging stations from the official IRVE consolidated
 /// feed (ODRÉ / data.gouv.fr, Licence Ouverte), scoped to a map viewport so
 /// the app never has to pull the ~227k-record national file at once.
@@ -47,7 +49,7 @@ class IrveService {
     );
 
     final response = await http
-        .get(uri, headers: {'User-Agent': 'mon-carburant-app/1.0'})
+        .get(uri, headers: const {'User-Agent': AppConfig.userAgent})
         .timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) {
       throw Exception(
@@ -60,7 +62,8 @@ class IrveService {
 
     final byStation = <String, List<Map<String, dynamic>>>{};
     for (final row in records) {
-      final id = row['id_station_itinerance'] as String? ?? row.hashCode.toString();
+      final id =
+          row['id_station_itinerance'] as String? ?? row.hashCode.toString();
       byStation.putIfAbsent(id, () => []).add(row);
     }
 

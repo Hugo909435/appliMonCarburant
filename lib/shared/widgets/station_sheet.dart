@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/utils/directions.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
 import '../../core/utils/formatters.dart';
@@ -44,19 +44,8 @@ class _StationSheetContent extends ConsumerWidget {
   final Station station;
   final ScrollController scrollController;
 
-  Future<void> _openDirections() async {
-    final uri = Uri.parse(
-      'geo:${station.lat},${station.lng}?q=${station.lat},${station.lng}',
-    );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      final fallback = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${station.lat},${station.lng}',
-      );
-      await launchUrl(fallback, mode: LaunchMode.externalApplication);
-    }
-  }
+  Future<void> _openDirections() =>
+      openDirectionsTo(station.lat, station.lng, label: station.ville);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -140,7 +129,6 @@ class _StationSheetContent extends ConsumerWidget {
               IconButton(
                 icon: Icon(
                   isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                  color: isFavorite ? AppColors.accent : null,
                 ),
                 onPressed: () =>
                     ref.read(favoritesProvider.notifier).toggle(station.id),
@@ -252,10 +240,7 @@ class _StationSheetContent extends ConsumerWidget {
                     if (station.automate)
                       const ListTile(
                         dense: true,
-                        leading: Icon(
-                          Icons.access_time_filled_rounded,
-                          color: AppColors.accent,
-                        ),
+                        leading: Icon(Icons.access_time_filled_rounded),
                         title: Text(
                           'Automate 24h/24',
                           style: TextStyle(fontWeight: FontWeight.w600),
@@ -284,11 +269,7 @@ class _StationSheetContent extends ConsumerWidget {
                 for (final service in station.services)
                   Chip(
                     label: Text(service),
-                    avatar: const Icon(
-                      Icons.check_circle_rounded,
-                      size: 16,
-                      color: AppColors.accent,
-                    ),
+                    avatar: const Icon(Icons.check_circle_rounded, size: 16),
                   ),
               ],
             ),

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/price_gaps.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
 import '../../providers/favorites_provider.dart';
 import 'brand_logo.dart';
+import 'price_gap_label.dart';
 import 'price_totem.dart';
 
 class StationListTile extends ConsumerWidget {
@@ -17,12 +19,18 @@ class StationListTile extends ConsumerWidget {
     required this.fuel,
     this.distanceKm,
     this.footer,
+    this.priceGap,
     required this.onTap,
   });
 
   final Station station;
   final FuelType fuel;
   final double? distanceKm;
+
+  /// Position de cette station par rapport à la moins chère de la liste où
+  /// elle figure. `null` quand l'écran ne compare pas ses stations entre
+  /// elles, et la mention disparaît.
+  final PriceGap? priceGap;
 
   /// Optional extra line under the address (e.g. the real cost of a fill-up).
   final Widget? footer;
@@ -92,13 +100,23 @@ class StationListTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              PriceTotem(price: price, accentColor: fuel.color),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PriceTotem(price: price, accentColor: fuel.color),
+                  if (priceGap case final gap?) ...[
+                    const SizedBox(height: 4),
+                    PriceGapLabel(gap: gap),
+                  ],
+                ],
+              ),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: Icon(
                   isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
                   color: isFavorite
-                      ? AppColors.accent
+                      ? onSurface
                       : onSurface.withValues(alpha: 0.35),
                 ),
                 onPressed: () =>

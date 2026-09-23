@@ -13,7 +13,7 @@ import '../../core/theme/fuel_colors.dart';
 import '../../data/models/ev_station.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
-import '../../data/services/geocoding_service.dart';
+import '../../providers/map_search_provider.dart';
 import '../../providers/comparison_provider.dart';
 import '../../providers/derived_providers.dart';
 import '../../providers/favorites_provider.dart';
@@ -21,10 +21,10 @@ import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/map_viewport_provider.dart';
 import '../../providers/station_brands_provider.dart';
-import '../../providers/stations_provider.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/price_totem.dart';
 import '../../shared/widgets/station_sheet.dart';
+import '../../core/config/app_config.dart';
 import 'widgets/ev_station_sheet.dart';
 import 'widgets/map_filter_bar.dart';
 
@@ -38,23 +38,19 @@ const _detailZoomThreshold = 12.0;
 /// building station markers, so panning doesn't cause markers to pop in.
 const _viewportPadding = 0.3;
 
-enum _SearchKind { station, address }
+/// Diamètre de la pastille d'enseigne montrée sous [_detailZoomThreshold].
+///
+/// Le logo n'occupe que le carré inscrit dans le rond, anneau déduit : il est
+/// donc dessiné à peine plus de 19 px de côté ici. C'est ce qui fixe le
+/// diamètre — plus étroit, les logotypes larges comme celui d'Intermarché
+/// repasseraient au badge coloré (voir [BrandLogo]).
+const _dotSize = 32.0;
 
-class _SearchHit {
-  const _SearchHit({
-    required this.kind,
-    required this.title,
-    required this.subtitle,
-    required this.lat,
-    required this.lng,
-  });
+/// Épaisseur de l'anneau coloré autour de la pastille.
+const _dotRingWidth = 2.0;
 
-  final _SearchKind kind;
-  final String title;
-  final String subtitle;
-  final double lat;
-  final double lng;
-}
+/// Boîte du marqueur compact : la pastille, plus la marge de son ombre.
+const _dotMarkerSize = _dotSize + 4;
 
 /// Home is the map: it's the fastest way to answer "where's the cheapest
 /// fuel/charger near me", so there's no separate landing page above it.
@@ -71,17 +67,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _mapController = MapController();
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
-  final _geocodingService = GeocodingService();
 
-  Timer? _searchDebounce;
   Timer? _boundsDebounce;
-  int _searchToken = 0;
-  List<_SearchHit> _results = [];
-  bool _searching = false;
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _boundsDebounce?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
@@ -89,105 +79,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  List<Station> _matchStations(List<Station> stations, String query) {
-    final q = query.trim().toLowerCase();
-    final isPostal = RegExp(r'^\d{2,5}$').hasMatch(q);
-    if (isPostal) {
-      return stations.where((s) => s.cp.startsWith(q)).take(5).toList();
-    }
-    return stations
-        .where(
-          (s) =>
-              s.ville.toLowerCase().contains(q) ||
-              s.adresse.toLowerCase().contains(q),
-        )
-        .take(5)
-        .toList();
-  }
-
-  void _onQueryChanged(String value) {
-    _searchDebounce?.cancel();
-    final query = value.trim();
-    if (query.length < 2) {
-      setState(() {
-        _results = [];
-        _searching = false;
-      });
-      return;
-    }
-    _searchDebounce = Timer(
-      const Duration(milliseconds: 400),
-      () => _runSearch(query),
-    );
-  }
-
-  Future<void> _runSearch(String query) async {
-    final token = ++_searchToken;
-    final stations =
-        ref.read(stationsProvider).valueOrNull ?? const <Station>[];
-    final stationResults = _matchStations(stations, query)
-        .map(
-          (s) => _SearchHit(
-            kind: _SearchKind.station,
-            title: s.ville,
-            subtitle: s.adresse,
-            lat: s.lat,
-            lng: s.lng,
-          ),
-        )
-        .toList();
-
-    setState(() {
-      _results = stationResults;
-      _searching = true;
-    });
-
-    List<GeocodingResult> addresses;
-    try {
-      addresses = await _geocodingService.search(query);
-    } catch (_) {
-      addresses = const [];
-    }
-    if (!mounted || token != _searchToken) return;
-
-    setState(() {
-      _results = [
-        ...stationResults,
-        ...addresses.map(
-          (a) => _SearchHit(
-            kind: _SearchKind.address,
-            title: a.label.split(',').first,
-            subtitle: a.label,
-            lat: a.lat,
-            lng: a.lng,
-          ),
-        ),
-      ];
-      _searching = false;
-    });
-  }
-
-  void _selectResult(_SearchHit result) {
+  void _selectResult(SearchHit result) {
     _searchController.text = result.title;
     _searchFocus.unfocus();
-    setState(() => _results = []);
+    ref.read(mapSearchProvider.notifier).clear();
     _mapController.move(ll.LatLng(result.lat, result.lng), 15);
   }
 
   void _clearSearch() {
-    _searchDebounce?.cancel();
     _searchController.clear();
     _searchFocus.unfocus();
-    setState(() {
-      _results = [];
-      _searching = false;
-    });
+    ref.read(mapSearchProvider.notifier).clear();
   }
 
   void _dismissResults() {
-    if (_results.isEmpty && !_searchFocus.hasFocus) return;
+    if (ref.read(mapSearchProvider).isEmpty && !_searchFocus.hasFocus) return;
     _searchFocus.unfocus();
-    setState(() => _results = []);
+    ref.read(mapSearchProvider.notifier).clear();
   }
 
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
@@ -227,6 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final layer = ref.watch(mapLayerProvider);
+    final search = ref.watch(mapSearchProvider);
     final position = ref.watch(userLocationProvider).valueOrNull;
     final locationLoading = ref.watch(
       userLocationProvider.select((v) => v.isLoading),
@@ -242,10 +151,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _TopBar(
             searchController: _searchController,
             searchFocus: _searchFocus,
-            searching: _searching,
-            results: _results,
+            searching: search.searching,
+            results: search.results,
             locationLoading: locationLoading,
-            onQueryChanged: _onQueryChanged,
+            onQueryChanged: ref.read(mapSearchProvider.notifier).onQueryChanged,
             onClearSearch: _clearSearch,
             onSelectResult: _selectResult,
             onLocate: _locateMe,
@@ -267,10 +176,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName:
-                          'com.moncarburant.mon_carburant_app',
+                      urlTemplate: AppConfig.tileUrlTemplate,
+                      userAgentPackageName: AppConfig.packageName,
                     ),
                     if (layer == MapLayer.stations)
                       const _StationMarkersLayer()
@@ -369,11 +276,11 @@ class _TopBar extends StatelessWidget {
   final TextEditingController searchController;
   final FocusNode searchFocus;
   final bool searching;
-  final List<_SearchHit> results;
+  final List<SearchHit> results;
   final bool locationLoading;
   final ValueChanged<String> onQueryChanged;
   final VoidCallback onClearSearch;
-  final ValueChanged<_SearchHit> onSelectResult;
+  final ValueChanged<SearchHit> onSelectResult;
   final VoidCallback onLocate;
   final VoidCallback onRoute;
   final VoidCallback onAccount;
@@ -482,8 +389,8 @@ class _StationMarkersLayer extends ConsumerWidget {
           for (final station in stations)
             Marker(
               point: ll.LatLng(station.lat, station.lng),
-              width: showDetail ? 92 : 22,
-              height: showDetail ? 44 : 22,
+              width: showDetail ? 92 : _dotMarkerSize,
+              height: showDetail ? 44 : _dotMarkerSize,
               child: showDetail
                   ? _StationMarker(
                       station: station,
@@ -494,6 +401,7 @@ class _StationMarkersLayer extends ConsumerWidget {
                     )
                   : _StationDot(
                       color: fuel.color,
+                      brand: brands[station.id],
                       isFavorite: favoriteIds.contains(station.id),
                       onTap: () => showStationSheet(context, station),
                     ),
@@ -553,36 +461,71 @@ class _EvMarkersLayer extends ConsumerWidget {
 }
 
 /// Compact stand-in for [_StationMarker] shown when the map is zoomed out
-/// too far for full price totems to be legible — just enough color to spot
-/// clusters of stations without the visual noise of dozens of totems.
+/// too far for full price totems to be legible — the brand's logo, without
+/// the visual noise of dozens of price totems.
 class _StationDot extends StatelessWidget {
   const _StationDot({
     required this.color,
+    required this.brand,
     required this.isFavorite,
     required this.onTap,
   });
 
+  /// Couleur du carburant sélectionné, portée par l'anneau : la même pour
+  /// toutes les stations, elle rappelle le carburant comparé, pas l'enseigne.
   final Color color;
+
+  /// Enseigne de la station, ou `null` quand elle n'a pas pu être reconnue.
+  final FuelBrand? brand;
+
   final bool isFavorite;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final brand = this.brand;
+    final ring = isFavorite ? AppColors.accent : color;
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isFavorite ? AppColors.accent : Colors.white,
-            width: 2,
-          ),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 2)],
-        ),
-      ),
+      child: brand == null
+          // Enseigne inconnue : la pastille pleine d'avant, faute de logo à
+          // y mettre.
+          ? Center(
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isFavorite ? AppColors.accent : Colors.white,
+                    width: 2,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 2),
+                  ],
+                ),
+              ),
+            )
+          : Center(
+              child: Container(
+                width: _dotSize,
+                height: _dotSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ring, width: _dotRingWidth),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 2),
+                  ],
+                ),
+                child: BrandLogo(
+                  brand: brand,
+                  size: _dotSize - 2 * _dotRingWidth,
+                  shape: BrandLogoShape.circle,
+                ),
+              ),
+            ),
     );
   }
 }
@@ -764,8 +707,8 @@ class _SearchField extends StatelessWidget {
 class _SearchResultsList extends StatelessWidget {
   const _SearchResultsList({required this.results, required this.onSelect});
 
-  final List<_SearchHit> results;
-  final ValueChanged<_SearchHit> onSelect;
+  final List<SearchHit> results;
+  final ValueChanged<SearchHit> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -784,13 +727,12 @@ class _SearchResultsList extends StatelessWidget {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final result = results[index];
-              final isStation = result.kind == _SearchKind.station;
+              final isStation = result.kind == SearchHitKind.station;
               return ListTile(
                 leading: Icon(
                   isStation
                       ? Icons.local_gas_station_rounded
                       : Icons.place_outlined,
-                  color: AppColors.accent,
                 ),
                 title: Text(
                   result.title,

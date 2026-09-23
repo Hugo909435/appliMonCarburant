@@ -52,14 +52,33 @@ lib/
 └── router/          # go_router
 ```
 
-## iOS
+## Marque
 
-Le code cible iOS dès le départ mais n'a pas été compilé/testé (nécessite un
-Mac avec Xcode).
+L'icône et l'écran de démarrage descendent tous d'un seul dessin vectoriel,
+dans `tool/generate_branding.dart`. Après l'avoir modifié :
 
-## Itinéraire
+```bash
+flutter test tool/generate_branding.dart   # redessine assets/branding/
+dart run flutter_launcher_icons            # décline les icônes
+dart run flutter_native_splash:create      # décline l'écran de démarrage
+```
 
-« Plein sur mon trajet » utilise le serveur de démo public d'OSRM
-(`lib/data/services/routing_service.dart`), qui ne tolère pas un usage
-intensif : à remplacer par une instance auto-hébergée avant une mise en
-production à grande échelle.
+## Services réseau
+
+Les URL des tuiles, du routage et du géocodage sont regroupées dans
+`lib/core/config/app_config.dart` et surchargeables au build par
+`--dart-define`. Les valeurs par défaut sont les serveurs publics de
+démonstration d'OpenStreetMap : pratiques en développement, **interdits pour
+une app publiée** par leurs conditions d'utilisation. `tool/build_release.sh`
+impose de les remplacer.
+
+## Publication
+
+`docs/publication-ios.md` détaille tout ce qui reste à faire pour l'App Store.
+L'essentiel côté code est prêt ; le premier build iOS demande un Mac et n'a
+pas encore eu lieu.
+
+```bash
+./tool/build_release.sh ios       # archive App Store
+./tool/build_release.sh android   # bundle Play Store
+```

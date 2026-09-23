@@ -24,8 +24,9 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
   final favoriteIds =
       ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
 
-  var stations =
-      allStations.where((s) => s.prices.containsKey(fuel.code)).toList();
+  var stations = allStations
+      .where((s) => s.prices.containsKey(fuel.code))
+      .toList();
   if (highwayFilter == kAnyHighway) {
     stations = stations.where((s) => s.isAutoroute).toList();
   } else if (highwayFilter != null) {
@@ -36,8 +37,9 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
     stations = stations.where((s) => favoriteIds.contains(s.id)).toList();
   }
   if (selectedService != null) {
-    stations =
-        stations.where((s) => s.services.contains(selectedService)).toList();
+    stations = stations
+        .where((s) => s.services.contains(selectedService))
+        .toList();
   }
   return stations;
 });
@@ -53,8 +55,9 @@ final filteredEvStationsProvider = Provider<List<EvStation>>((ref) {
   final freeOnly = ref.watch(evFreeOnlyProvider);
 
   if (plugType != null) {
-    evStations =
-        evStations.where((e) => e.plugTypes.contains(plugType)).toList();
+    evStations = evStations
+        .where((e) => e.plugTypes.contains(plugType))
+        .toList();
   }
   if (network != null) {
     evStations = evStations.where((e) => e.network == network).toList();

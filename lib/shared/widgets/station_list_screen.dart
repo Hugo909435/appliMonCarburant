@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/utils/price_gaps.dart';
 import '../../data/models/fuel_stat.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
@@ -26,6 +27,7 @@ class StationListScreen extends ConsumerWidget {
     this.emptyMessage = 'Aucune station trouvée.',
     this.appBarActions,
     this.banner,
+    this.comparePrices = false,
   });
 
   final String title;
@@ -43,9 +45,25 @@ class StationListScreen extends ConsumerWidget {
   final StationSort defaultSort;
   final String emptyMessage;
 
+  /// Situe chaque station par rapport à la moins chère de la liste, au lieu
+  /// de n'afficher que des prix bruts.
+  ///
+  /// Réservé aux listes que l'utilisateur a lui-même constituées — ses
+  /// favoris — où les stations sont là pour être départagées. Sur une liste
+  /// subie, comme tout un département, l'écart avec la moins chère du lot ne
+  /// veut pas dire grand-chose.
+  final bool comparePrices;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fuel = ref.watch(selectedFuelProvider);
+
+    final gaps = comparePrices
+        ? priceGaps({
+            for (final station in stations)
+              station.id: station.prices[fuel.code],
+          })
+        : const <String, PriceGap>{};
 
     final sorted = [...stations];
     if (defaultSort == StationSort.distance && distances != null) {
@@ -97,6 +115,7 @@ class StationListScreen extends ConsumerWidget {
                         station: station,
                         fuel: fuel,
                         distanceKm: distances?[station.id],
+                        priceGap: gaps[station.id],
                         onTap: () => context.push('/station/${station.id}'),
                       );
                     },

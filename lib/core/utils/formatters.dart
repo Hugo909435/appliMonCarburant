@@ -6,6 +6,14 @@ String formatPrice(double? price) {
 String formatEuros(double amount) =>
     '${amount.toStringAsFixed(2).replaceFirst('.', ',')} €';
 
+/// Écart de prix au litre, toujours signé : « +0,043 € ». Le signe est ce
+/// qui distingue un écart d'un prix, et il ne doit jamais disparaître.
+String formatPriceGap(double delta) {
+  final sign = delta < 0 ? '−' : '+';
+  return '$sign${delta.abs().toStringAsFixed(3).replaceFirst('.', ',')} €';
+}
+
+
 String formatDistance(double km) {
   if (km < 1) return '${(km * 1000).round()} m';
   return '${km.toStringAsFixed(1).replaceFirst('.', ',')} km';

@@ -40,12 +40,18 @@ class PriceTotem extends StatelessWidget {
         ? AppColors.primary.withValues(alpha: 0.6)
         : Colors.white70;
 
-    final (hPad, vPad, radius, borderWidth, numberSize, unitSize) =
-        switch (size) {
-          PriceTotemSize.compact => (12.0, 7.0, AppRadius.sm, 4.0, 17.0, 10.5),
-          PriceTotemSize.large => (18.0, 12.0, AppRadius.md, 6.0, 32.0, 15.0),
-          PriceTotemSize.giant => (26.0, 18.0, AppRadius.lg, 9.0, 56.0, 19.0),
-        };
+    final (
+      hPad,
+      vPad,
+      radius,
+      borderWidth,
+      numberSize,
+      unitSize,
+    ) = switch (size) {
+      PriceTotemSize.compact => (12.0, 7.0, AppRadius.sm, 4.0, 17.0, 10.5),
+      PriceTotemSize.large => (18.0, 12.0, AppRadius.md, 6.0, 32.0, 15.0),
+      PriceTotemSize.giant => (26.0, 18.0, AppRadius.lg, 9.0, 56.0, 19.0),
+    };
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
@@ -53,7 +59,10 @@ class PriceTotem extends StatelessWidget {
         color: plate,
         borderRadius: BorderRadius.circular(radius),
         border: Border(
-          left: BorderSide(color: accentColor ?? AppColors.accent, width: borderWidth),
+          left: BorderSide(
+            color: accentColor ?? AppColors.accent,
+            width: borderWidth,
+          ),
         ),
       ),
       child: Row(

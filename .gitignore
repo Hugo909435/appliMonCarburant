@@ -47,5 +47,13 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
+# Sortie de compilation Gradle du module android : le motif /build/ ci-dessus
+# est ancre a la racine et ne la couvre pas.
+android/build/
+
 # Firebase client config (kept local, not in version control)
 android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# URL des services de production, injectées par tool/build_release.sh
+tool/.env.release

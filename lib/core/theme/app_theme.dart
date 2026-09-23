@@ -4,6 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 /// Monochrome palette: black, white, grays only. Fuel-type color-coding
 /// (see fuel_colors.dart) is kept as a functional exception — it's how
 /// drivers tell fuels apart at a glance on the map, not site branding.
+///
+/// Ces constantes ne servent qu'à ce qui est dessiné **par-dessus la carte**
+/// (marqueurs, totems de prix, boutons flottants, tracé d'itinéraire) : les
+/// tuiles restent claires quel que soit le thème de l'app, donc ces éléments
+/// gardent une palette fixe.
+///
+/// Tout ce qui est posé sur une surface du thème — ListTile, Chip, carte,
+/// feuille — doit prendre sa couleur dans `Theme.of(context).colorScheme`.
+/// [primary] et [accent] valent #111111 : sur le fond sombre (#000000 /
+/// #161616) le contraste tombe à 1,04:1, et l'élément disparaît.
+/// `test/theme_contrast_test.dart` verrouille cette règle.
 class AppColors {
   static const primary = Color(0xFF111111);
   static const primaryLight = Color(0xFF2B2B2B);
@@ -177,6 +188,10 @@ class AppTheme {
         backgroundColor: surface,
         side: BorderSide(color: outline, width: 1.2),
         labelStyle: textTheme.labelMedium?.copyWith(color: onSurface),
+        // Sans ceci, l'avatar d'un Chip garde la couleur d'icône par défaut
+        // de Material, pensée pour un fond clair : en thème sombre elle
+        // disparaît dans la puce.
+        iconTheme: IconThemeData(color: onSurface, size: 18),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),

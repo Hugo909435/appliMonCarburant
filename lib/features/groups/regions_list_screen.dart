@@ -45,10 +45,7 @@ class RegionsListScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  leading: const Icon(
-                    Icons.terrain_outlined,
-                    color: AppColors.accent,
-                  ),
+                  leading: const Icon(Icons.terrain_outlined),
                   title: Text(
                     entry.value,
                     style: const TextStyle(fontWeight: FontWeight.w600),

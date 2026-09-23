@@ -64,8 +64,8 @@ class MapFilterBar extends ConsumerWidget {
                 icon: Icons.ev_station_rounded,
                 iconColor: _FilterColors.bornes,
                 label: 'Bornes électriques',
-                onTap: () => ref.read(mapLayerProvider.notifier).state =
-                    MapLayer.bornes,
+                onTap: () =>
+                    ref.read(mapLayerProvider.notifier).state = MapLayer.bornes,
               ),
             ] else ...[
               _LogoBadge(
@@ -83,8 +83,8 @@ class MapFilterBar extends ConsumerWidget {
                 selected: layer == MapLayer.bornes,
                 tooltip: 'Bornes électriques',
                 tintIcon: true,
-                onTap: () => ref.read(mapLayerProvider.notifier).state =
-                    MapLayer.bornes,
+                onTap: () =>
+                    ref.read(mapLayerProvider.notifier).state = MapLayer.bornes,
               ),
             ],
             if (layer == MapLayer.stations) ...[
@@ -258,7 +258,8 @@ class _BrandChip extends ConsumerWidget {
       label: brand?.name ?? 'Enseigne',
       trailing: brand != null
           ? GestureDetector(
-              onTap: () => ref.read(selectedBrandProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(selectedBrandProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -319,9 +320,8 @@ class _BrandChip extends ConsumerWidget {
                   "Enseignes d'après OpenStreetMap.",
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.55),
+                    color: Theme.of(context).colorScheme.onSurface
+                        .withValues(alpha: 0.55),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -374,7 +374,8 @@ class _AutorouteChip extends ConsumerWidget {
       label: label,
       trailing: highway != null
           ? GestureDetector(
-              onTap: () => ref.read(highwayFilterProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(highwayFilterProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -462,7 +463,8 @@ class _ServiceChip extends ConsumerWidget {
       label: service ?? 'Service',
       trailing: service != null
           ? GestureDetector(
-              onTap: () => ref.read(selectedServiceProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(selectedServiceProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -472,8 +474,8 @@ class _ServiceChip extends ConsumerWidget {
 
   void _pickService(BuildContext context, WidgetRef ref) {
     final stations = ref.read(stationsProvider).valueOrNull ?? const [];
-    final services =
-        stations.expand((s) => s.services).toSet().toList()..sort();
+    final services = stations.expand((s) => s.services).toSet().toList()
+      ..sort();
 
     showModalBottomSheet<void>(
       context: context,
@@ -488,7 +490,10 @@ class _ServiceChip extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Service proposé', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Service proposé',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               if (services.isEmpty)
                 const Padding(
@@ -508,7 +513,8 @@ class _ServiceChip extends ConsumerWidget {
                             label: Text(s),
                             selected: s == ref.read(selectedServiceProvider),
                             onSelected: (_) {
-                              ref.read(selectedServiceProvider.notifier).state = s;
+                              ref.read(selectedServiceProvider.notifier).state =
+                                  s;
                               Navigator.of(context).pop();
                             },
                           ),
@@ -558,7 +564,8 @@ class _DepartmentChip extends ConsumerWidget {
       label: label,
       trailing: dep != null
           ? GestureDetector(
-              onTap: () => ref.read(departmentFilterProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(departmentFilterProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -600,12 +607,12 @@ class _DepartmentPickerSheetState
     final filtered = _query.isEmpty
         ? departments
         : departments
-            .where(
-              (d) =>
-                  d.name.toLowerCase().contains(_query.toLowerCase()) ||
-                  d.num.contains(_query),
-            )
-            .toList();
+              .where(
+                (d) =>
+                    d.name.toLowerCase().contains(_query.toLowerCase()) ||
+                    d.num.contains(_query),
+              )
+              .toList();
 
     return SafeArea(
       child: Padding(
@@ -620,7 +627,10 @@ class _DepartmentPickerSheetState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Département', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Département',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               TextField(
                 autofocus: false,
@@ -640,7 +650,9 @@ class _DepartmentPickerSheetState
                       dense: true,
                       title: Text('${dep.num} · ${dep.name}'),
                       onTap: () {
-                        widget.ref.read(departmentFilterProvider.notifier).state =
+                        widget.ref
+                                .read(departmentFilterProvider.notifier)
+                                .state =
                             dep.num;
                         Navigator.of(context).pop();
                       },
@@ -673,7 +685,8 @@ class _PlugTypeChip extends ConsumerWidget {
       label: plugType ?? 'Prise',
       trailing: plugType != null
           ? GestureDetector(
-              onTap: () => ref.read(plugTypeFilterProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(plugTypeFilterProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -694,7 +707,10 @@ class _PlugTypeChip extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Type de prise', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Type de prise',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -732,7 +748,8 @@ class _EvNetworkChip extends ConsumerWidget {
       label: network ?? 'Réseau',
       trailing: network != null
           ? GestureDetector(
-              onTap: () => ref.read(evNetworkFilterProvider.notifier).state = null,
+              onTap: () =>
+                  ref.read(evNetworkFilterProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
@@ -743,7 +760,11 @@ class _EvNetworkChip extends ConsumerWidget {
   void _pickNetwork(BuildContext context, WidgetRef ref) {
     final evStations = ref.read(evStationsProvider).valueOrNull ?? const [];
     final networks =
-        evStations.map((e) => e.network).where((n) => n.isNotEmpty).toSet().toList()
+        evStations
+            .map((e) => e.network)
+            .where((n) => n.isNotEmpty)
+            .toSet()
+            .toList()
           ..sort();
 
     showModalBottomSheet<void>(
@@ -758,13 +779,17 @@ class _EvNetworkChip extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Réseau visible ici', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Réseau visible ici',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 4),
               Text(
                 'D\'après les bornes affichées sur la zone.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                  color: Theme.of(context).colorScheme.onSurface
+                      .withValues(alpha: 0.55),
                 ),
               ),
               const SizedBox(height: 12),
@@ -808,8 +833,7 @@ class _FastChargeChip extends ConsumerWidget {
       icon: Icons.bolt_rounded,
       iconColor: _FilterColors.fastCharge,
       label: 'Charge rapide',
-      onTap: () =>
-          ref.read(fastChargeOnlyProvider.notifier).state = !active,
+      onTap: () => ref.read(fastChargeOnlyProvider.notifier).state = !active,
     );
   }
 }
@@ -884,7 +908,10 @@ class _Pill extends StatelessWidget {
               ),
               if (trailing != null) ...[
                 const SizedBox(width: 6),
-                IconTheme(data: IconThemeData(color: fg), child: trailing!),
+                IconTheme(
+                  data: IconThemeData(color: fg),
+                  child: trailing!,
+                ),
               ],
             ],
           ),
@@ -893,4 +920,3 @@ class _Pill extends StatelessWidget {
     );
   }
 }
-

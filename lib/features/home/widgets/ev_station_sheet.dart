@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/utils/directions.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/ev_station.dart';
 import '../../../shared/widgets/brand_badge.dart';
@@ -20,19 +20,8 @@ class _EvStationSheetContent extends StatelessWidget {
 
   final EvStation station;
 
-  Future<void> _openDirections() async {
-    final uri = Uri.parse(
-      'geo:${station.lat},${station.lng}?q=${station.lat},${station.lng}',
-    );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      final fallback = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${station.lat},${station.lng}',
-      );
-      await launchUrl(fallback, mode: LaunchMode.externalApplication);
-    }
-  }
+  Future<void> _openDirections() =>
+      openDirectionsTo(station.lat, station.lng, label: station.name);
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +50,9 @@ class _EvStationSheetContent extends StatelessWidget {
                       ),
                       Text(
                         station.address,
-                        style: TextStyle(color: onSurface.withValues(alpha: 0.65)),
+                        style: TextStyle(
+                          color: onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                     ],
                   ),
@@ -106,11 +97,13 @@ class _EvStationSheetContent extends StatelessWidget {
                 ],
               ),
             ],
-            if (station.accessCondition.isNotEmpty || station.hours.isNotEmpty) ...[
+            if (station.accessCondition.isNotEmpty ||
+                station.hours.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text('Infos', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 6),
-              if (station.accessCondition.isNotEmpty) Text(station.accessCondition),
+              if (station.accessCondition.isNotEmpty)
+                Text(station.accessCondition),
               if (station.hours.isNotEmpty) Text('Horaires : ${station.hours}'),
             ],
             const SizedBox(height: 20),
@@ -137,9 +130,6 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 16, color: AppColors.accent),
-      label: Text(label),
-    );
+    return Chip(avatar: Icon(icon, size: 16), label: Text(label));
   }
 }

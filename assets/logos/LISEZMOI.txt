@@ -4,14 +4,45 @@ Un PNG carré 256x256 par enseigne, nommé d'après sa clé (voir
 lib/core/brands/brand_catalog.dart). Une enseigne sans fichier ici
 s'affiche sous forme de badge à ses couleurs (c'est le cas d'ecomarche).
 
+PRÉFÉREZ TOUJOURS LE SYMBOLE CARRÉ AU LOGOTYPE
+----------------------------------------------
+Un logo « nom écrit en long » enfermé dans un carré n'occupe qu'une mince
+bande : sur un marqueur de carte de 22 px, il tombe à 4 px de haut et ne
+veut plus rien dire. L'app le détecte (tool/measure_logos.dart mesure la
+place réellement occupée) et bascule alors sur le badge coloré, lisible.
+
+Autrement dit : déposer le rond au « L » de Leclerc plutôt que le mot
+« E.Leclerc » n'est pas une coquetterie, c'est ce qui décide si le vrai
+logo s'affiche ou non.
+
 Sources (septembre 2026) :
 - icône officielle du site de l'enseigne : totalenergies, bp, carrefour,
   systemeu, auchan, shell, avia, eni
-- Wikimedia Commons (via la propriété « logo » de Wikidata) : leclerc,
-  intermarche, esso, colruyt, netto, cora, casino, dyneff, spar, vito, elan
+- site officiel, icône du manifeste web : spar (spar-international.com)
+- icône de l'application mobile officielle (App Store) : intermarche
+  (« Intermarché – courses en ligne », éditée par STIME)
+- Wikimedia Commons, fichier vectoriel rendu puis recadré :
+  leclerc (« Logo E.Leclerc Sans le texte.svg », domaine public),
+  casino (emblème floral isolé de « Logo of Casino Supermarchés.svg »,
+  domaine public)
+- Wikimedia Commons (via la propriété « logo » de Wikidata) : esso, colruyt,
+  netto, cora, dyneff, vito, elan
+
+Reste un seul logotype large : colruyt. Aucun symbole carré n'en est publié —
+ni sur colruyt.fr, ni sur Commons (on n'y trouve que le logo de la holding
+« Colruyt Group »), ni en icône d'application (la leur s'appelle « Xtra »).
+Il s'affiche donc en badge sur la carte et dans les listes, et retrouve son
+logo sur les fiches station, où la place suffit.
 
 Ces logos sont des marques déposées de leurs propriétaires, utilisées
 uniquement pour identifier l'enseigne de chaque station.
 
-Pour en ajouter ou en remplacer un : déposer <clé>.png ici, puis faire un
-hot restart (le hot reload ne suffit pas).
+Pour en ajouter ou en remplacer un :
+
+  dart run tool/fetch_brand_icons.dart      # icône officielle d'un site
+  dart run tool/search_commons_logos.dart   # candidats Wikimedia Commons
+  dart run tool/search_app_icons.dart       # icône de l'app mobile officielle
+  flutter test tool/normalize_logo.dart     # cadrage 256x256 sur fond blanc
+  flutter test tool/measure_logos.dart      # met à jour logo_metrics.dart
+
+Puis un hot restart (le hot reload ne suffit pas).

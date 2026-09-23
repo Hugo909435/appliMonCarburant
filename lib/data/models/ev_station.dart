@@ -86,8 +86,7 @@ class EvStation {
 
   static double _deg2rad(double deg) => deg * (math.pi / 180.0);
 
-  static bool _isTrue(dynamic v) =>
-      v.toString().trim().toLowerCase() == 'true';
+  static bool _isTrue(dynamic v) => v.toString().trim().toLowerCase() == 'true';
 
   static double _asDouble(dynamic v) {
     if (v is num) return v.toDouble();
