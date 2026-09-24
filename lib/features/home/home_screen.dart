@@ -33,6 +33,7 @@ import 'widgets/ev_station_sheet.dart';
 import 'widgets/ev_station_tile.dart';
 import 'widgets/map_filter_bar.dart';
 import 'widgets/stations_sheet.dart';
+import 'widgets/sync_indicator.dart';
 
 /// Below this zoom level the map is showing a wide area (region/country),
 /// where dozens of full price totems would just overlap into noise — show
@@ -330,6 +331,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
+                    const SyncIndicator(),
                     if (search.results.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),

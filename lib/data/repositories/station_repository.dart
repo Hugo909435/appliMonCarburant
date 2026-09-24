@@ -21,7 +21,12 @@ class StationRepository {
   /// Cached data is considered fresh enough to skip an automatic refresh
   /// for this long (the government feed itself updates continuously, but
   /// there is no need to re-download 10+ MB every app launch).
-  static const freshFor = Duration(hours: 6);
+  ///
+  /// Kept under two hours on purpose: the product promise is that a user
+  /// never sees data older than 2 h. [StationsNotifier] checks staleness
+  /// every [StationsNotifier.checkEvery] and on resume, so the margin
+  /// covers that check interval plus the download itself.
+  static const freshFor = Duration(hours: 1, minutes: 50);
 
   Future<List<Station>> loadFromCache() async {
     final raw = await _cache.read();
@@ -29,7 +34,13 @@ class StationRepository {
     return raw.map(Station.fromJson).toList();
   }
 
-  Future<DateTime?> lastUpdate() => _cache.lastUpdate();
+  /// Last successful download in this session. Backs up the on-disk date
+  /// where the cache can't be written (web): without it the data would
+  /// always look stale and be re-downloaded on every periodic check.
+  DateTime? _fetchedAt;
+
+  Future<DateTime?> lastUpdate() async =>
+      await _cache.lastUpdate() ?? _fetchedAt;
 
   Future<bool> isStale() async {
     final last = await lastUpdate();
@@ -41,6 +52,7 @@ class StationRepository {
     try {
       final raw = await _feed.fetchStations();
       await _cache.write(raw);
+      _fetchedAt = DateTime.now();
       return raw.map(Station.fromJson).toList();
     } catch (e) {
       if (kDebugMode) {
