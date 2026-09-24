@@ -52,7 +52,7 @@ class _FriendlyErrorWidget extends StatelessWidget {
     // Pas de Theme.of ici : ce widget doit pouvoir s'afficher même quand
     // l'erreur vient de la construction du thème lui-même.
     return const Material(
-      color: Color(0xFF111111),
+      color: Color(0xFF0F2D3F),
       child: Center(
         child: Padding(
           padding: EdgeInsets.all(24),

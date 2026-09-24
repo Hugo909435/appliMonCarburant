@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/station.dart';
 import '../../providers/stations_provider.dart';
+import '../../shared/widgets/ad_slot.dart';
 
 class DepartmentsListScreen extends ConsumerWidget {
   const DepartmentsListScreen({super.key});
@@ -26,12 +27,15 @@ class DepartmentsListScreen extends ConsumerWidget {
         data: (departments) {
           final entries = departments.values.toList()
             ..sort((a, b) => a.name.compareTo(b.name));
+          // Une liste où l'on cherche une ligne précise : annonces espacées.
+          final ads = InFeedAds(entries.length, first: 5, every: 20);
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            itemCount: entries.length,
+            itemCount: ads.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final dept = entries[index];
+              if (ads.isAd(index)) return const AdSlot();
+              final dept = entries[ads.itemIndex(index)];
               final count = counts[dept.num] ?? 0;
               return Card(
                 child: ListTile(

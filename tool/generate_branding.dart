@@ -1,6 +1,7 @@
 // Génère les sources de la marque (icône d'app + logos de démarrage) à partir
-// du seul dessin vectoriel ci-dessous, pour qu'il n'y ait jamais deux versions
-// du logo qui divergent.
+// du seul logo vectoriel assets/branding/logo.svg — le même fichier que le
+// favicon du site — pour qu'il n'y ait jamais deux versions du logo qui
+// divergent.
 //
 //   flutter test tool/generate_branding.dart
 //   dart run flutter_launcher_icons
@@ -10,10 +11,9 @@
 // build*, volontairement absentes de la section `assets:` du pubspec — elles
 // n'ont pas à être embarquées dans l'app.
 //
-// Le dessin suit la charte (core/theme/app_theme.dart) : monochrome, noir et
-// blanc, aucune couleur d'enseigne. Le glyphe est une pompe dont l'afficheur
-// et les deux lignes de prix sont détourés — l'app compare des prix, l'icône
-// le dit.
+// Le SVG est une tuile bleu nuit (un <rect>) portant une pompe blanche, une
+// flamme et un bandeau orange. Seules les commandes absolues M, C et Z sont
+// lues : c'est tout ce que le fichier emploie.
 
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -21,14 +21,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Encombrement réel du glyphe, socle et pistolet compris, dans le repère où
-/// sont exprimées toutes les coordonnées du dessin. Sert à le recentrer :
-/// c'est ce rectangle, et non le repère, qui est aligné sur le centre de
-/// chaque image produite.
-const _glyphBounds = Rect.fromLTRB(204, 196, 768, 812);
-
-/// Noir de la charte (AppColors.primary).
-const _ink = Color(0xFF111111);
+const _source = 'assets/branding/logo.svg';
 
 void main() {
   testWidgets('génère les assets de marque', (tester) async {
@@ -36,50 +29,52 @@ void main() {
     // temps et les Future réellement asynchrones de `Picture.toImage` ne se
     // résolvent jamais.
     await tester.runAsync(() async {
-      Directory('assets/branding').createSync(recursive: true);
+      final logo = _Logo.parse(File(_source).readAsStringSync());
 
-      // Icône d'app : glyphe blanc sur fond noir, plein cadre — iOS arrondit
+      // Icône d'app : le glyphe sur la tuile, plein cadre — iOS arrondit
       // lui-même les angles et refuse toute transparence sur le 1024.
       await _write('assets/branding/app_icon.png', 1024, (canvas, size) {
-        _paintBackground(canvas, size);
-        _paintGlyph(canvas, size, Colors.white, heightFraction: 0.58);
+        canvas.drawRect(
+          Rect.fromLTWH(0, 0, size, size),
+          Paint()..color = logo.background,
+        );
+        logo.paint(canvas, size, heightFraction: 0.64);
       });
 
       // Calque avant des icônes adaptatives Android : le glyphe seul, très
       // en retrait — le masque du système peut rogner jusqu'au tiers de
-      // l'image, et l'animation de lancement la met à l'échelle.
+      // l'image, et l'animation de lancement la met à l'échelle. Les
+      // évidements laissent voir le fond (adaptive_icon_background).
       await _write('assets/branding/app_icon_foreground.png', 1024, (
         canvas,
         size,
       ) {
-        _paintGlyph(canvas, size, Colors.white, heightFraction: 0.40);
+        logo.paint(canvas, size, heightFraction: 0.48);
       });
 
-      // Logos de l'écran de démarrage, sur fond transparent : un par thème.
-      await _write('assets/branding/splash_logo_light.png', 768, (
+      // Icône monochrome des thèmes dynamiques d'Android 13+ : seul l'alpha
+      // compte, la flamme et le bandeau passent donc en blanc eux aussi.
+      await _write('assets/branding/app_icon_monochrome.png', 1024, (
         canvas,
         size,
       ) {
-        _paintGlyph(canvas, size, _ink, heightFraction: 0.92);
+        logo.paint(canvas, size, heightFraction: 0.48, tint: Colors.white);
       });
-      await _write('assets/branding/splash_logo_dark.png', 768, (canvas, size) {
-        _paintGlyph(canvas, size, Colors.white, heightFraction: 0.92);
+
+      // Logo de l'écran de démarrage, posé sur le bleu de la tuile (voir
+      // flutter_native_splash dans le pubspec), identique en clair et sombre.
+      await _write('assets/branding/splash_logo.png', 768, (canvas, size) {
+        logo.paint(canvas, size, heightFraction: 0.92);
       });
 
       // Android 12+ impose son gabarit : image de 1152 px dont seul un disque
       // central de 768 px est visible. Le glyphe doit donc y tenir largement
       // au large, sans quoi le système le rogne.
-      await _write('assets/branding/splash_logo_light_android12.png', 1152, (
+      await _write('assets/branding/splash_logo_android12.png', 1152, (
         canvas,
         size,
       ) {
-        _paintGlyph(canvas, size, _ink, heightFraction: 0.46);
-      });
-      await _write('assets/branding/splash_logo_dark_android12.png', 1152, (
-        canvas,
-        size,
-      ) {
-        _paintGlyph(canvas, size, Colors.white, heightFraction: 0.46);
+        logo.paint(canvas, size, heightFraction: 0.46);
       });
 
       for (final file
@@ -107,96 +102,88 @@ Future<void> _write(
   picture.dispose();
 }
 
-void _paintBackground(Canvas canvas, double size) {
-  final rect = Rect.fromLTWH(0, 0, size, size);
-  // Dégradé très léger : sur un aplat parfaitement noir, l'icône paraît plate
-  // au milieu d'un fond d'écran sombre.
-  canvas.drawRect(
-    rect,
-    Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF242424), Color(0xFF060606)],
-      ).createShader(rect),
-  );
+/// Le logo lu depuis le SVG : la couleur de la tuile et les tracés colorés
+/// posés dessus, dans l'ordre du fichier.
+class _Logo {
+  _Logo(this.background, this.layers)
+    : bounds = layers
+          .map((l) => l.path.getBounds())
+          .reduce((a, b) => a.expandToInclude(b));
+
+  factory _Logo.parse(String svg) {
+    final rectFill = RegExp(r'<rect[^>]*fill="([^"]+)"').firstMatch(svg)!;
+    final layers = [
+      for (final m in RegExp(
+        r'<path\s+d="([^"]+)"\s+fill="([^"]+)"',
+      ).allMatches(svg))
+        (path: _parsePath(m[1]!), color: _parseColor(m[2]!)),
+    ];
+    return _Logo(_parseColor(rectFill[1]!), layers);
+  }
+
+  final Color background;
+  final List<({Path path, Color color})> layers;
+
+  /// Encombrement réel du glyphe, tuile exclue : c'est lui, et non le
+  /// viewBox, qui est centré dans chaque image produite.
+  final Rect bounds;
+
+  /// Dessine le glyphe centré dans un carré de [size] pixels, à une échelle
+  /// telle que sa hauteur occupe [heightFraction] du côté. [tint] remplace
+  /// toutes les couleurs.
+  void paint(
+    Canvas canvas,
+    double size, {
+    required double heightFraction,
+    Color? tint,
+  }) {
+    canvas.save();
+    canvas.translate(size / 2, size / 2);
+    canvas.scale(size * heightFraction / bounds.height);
+    canvas.translate(-bounds.center.dx, -bounds.center.dy);
+    for (final layer in layers) {
+      canvas.drawPath(
+        layer.path,
+        Paint()
+          ..color = tint ?? layer.color
+          ..isAntiAlias = true,
+      );
+    }
+    canvas.restore();
+  }
 }
 
-/// Dessine la pompe, recentrée dans un carré de [size] pixels, à une échelle
-/// telle que sa hauteur occupe [heightFraction] du côté.
-void _paintGlyph(
-  Canvas canvas,
-  double size,
-  Color color, {
-  required double heightFraction,
-}) {
-  canvas.save();
-  canvas.translate(size / 2, size / 2);
-  canvas.scale(size * heightFraction / _glyphBounds.height);
-  canvas.translate(-_glyphBounds.center.dx, -_glyphBounds.center.dy);
+Path _parsePath(String d) {
+  final tokens = RegExp(
+    r'[MCZ]|-?\d*\.?\d+',
+  ).allMatches(d).map((m) => m[0]!).toList();
+  final path = Path()..fillType = PathFillType.evenOdd;
+  var i = 0;
+  double next() => double.parse(tokens[i++]);
+  while (i < tokens.length) {
+    switch (tokens[i++]) {
+      case 'M':
+        path.moveTo(next(), next());
+      case 'C':
+        path.cubicTo(next(), next(), next(), next(), next(), next());
+      case 'Z':
+        path.close();
+      case final t:
+        throw FormatException('Commande SVG non gérée : $t');
+    }
+  }
+  return path;
+}
 
-  final body = Path()
-    ..addRRect(
-      RRect.fromLTRBAndCorners(
-        248,
-        196,
-        596,
-        812,
-        topLeft: const Radius.circular(58),
-        topRight: const Radius.circular(58),
-        bottomLeft: const Radius.circular(18),
-        bottomRight: const Radius.circular(18),
-      ),
+Color _parseColor(String value) {
+  final rgb = RegExp(r'rgb\((\d+),\s*(\d+),\s*(\d+)\)').firstMatch(value);
+  if (rgb != null) {
+    return Color.fromARGB(
+      255,
+      int.parse(rgb[1]!),
+      int.parse(rgb[2]!),
+      int.parse(rgb[3]!),
     );
-
-  // Socle : déborde de la caisse des deux côtés, comme une pompe posée au sol.
-  final base = Path()
-    ..addRRect(
-      RRect.fromLTRBR(204, 754, 640, 812, const Radius.circular(22)),
-    );
-
-  // L'afficheur et les deux lignes de prix sont retranchés de la caisse : un
-  // trou laisse passer le fond, ce qui garde le logo lisible posé sur
-  // n'importe quelle couleur.
-  final cutouts = Path()
-    ..addRRect(
-      RRect.fromLTRBR(316, 272, 528, 430, const Radius.circular(26)),
-    )
-    ..addRRect(
-      RRect.fromLTRBR(316, 506, 528, 548, const Radius.circular(21)),
-    )
-    ..addRRect(
-      RRect.fromLTRBR(316, 592, 452, 634, const Radius.circular(21)),
-    );
-
-  canvas.drawPath(
-    Path.combine(
-      PathOperation.difference,
-      Path.combine(PathOperation.union, body, base),
-      cutouts,
-    ),
-    Paint()
-      ..color = color
-      ..isAntiAlias = true,
-  );
-
-  // Le flexible sort du flanc de la pompe, remonte et s'incurve vers le
-  // pistolet. Tracé au trait plutôt qu'uni à la caisse : `Path.combine`
-  // n'opère que sur des surfaces fermées, et rien ne vient l'évider.
-  canvas.drawPath(
-    Path()
-      ..moveTo(584, 610)
-      ..lineTo(660, 610)
-      ..quadraticBezierTo(704, 610, 704, 566)
-      ..lineTo(704, 392)
-      ..quadraticBezierTo(704, 348, 746, 336),
-    Paint()
-      ..color = color
-      ..isAntiAlias = true
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 44
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round,
-  );
-  canvas.restore();
+  }
+  return Color(0xFF000000 | int.parse(value.substring(1), radix: 16));
 }

@@ -10,6 +10,7 @@ import '../../providers/filters_provider.dart';
 import 'fuel_selector.dart';
 import 'station_list_tile.dart';
 import 'stats_summary_card.dart';
+import 'ad_slot.dart';
 
 enum StationSort { price, distance, none }
 
@@ -82,6 +83,7 @@ class StationListScreen extends ConsumerWidget {
         return pa.compareTo(pb);
       });
     }
+    final ads = InFeedAds(sorted.length);
 
     return Scaffold(
       appBar: AppBar(title: Text(title), actions: appBarActions),
@@ -107,10 +109,11 @@ class StationListScreen extends ConsumerWidget {
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    itemCount: sorted.length,
+                    itemCount: ads.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final station = sorted[index];
+                      if (ads.isAd(index)) return const AdSlot();
+                      final station = sorted[ads.itemIndex(index)];
                       return StationListTile(
                         station: station,
                         fuel: fuel,

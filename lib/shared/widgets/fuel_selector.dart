@@ -51,14 +51,17 @@ class _FuelPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Pleines et sans contour, comme les filtres de la carte : seule la
+    // pastille choisie prend la couleur de son carburant.
     return Material(
-      color: isSelected ? color : Colors.transparent,
-      shape: StadiumBorder(side: BorderSide(color: color, width: 1.4)),
+      color: isSelected ? color : scheme.surface,
+      shape: const StadiumBorder(),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -75,7 +78,7 @@ class _FuelPill extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : color,
+                  color: isSelected ? Colors.white : scheme.onSurface,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
                 ),

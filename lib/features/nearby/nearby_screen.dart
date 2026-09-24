@@ -12,6 +12,7 @@ import '../../providers/location_provider.dart';
 import '../../providers/vehicle_provider.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/station_list_tile.dart';
+import '../../shared/widgets/ad_slot.dart';
 
 enum _NearbySort { realCost, price, distance }
 
@@ -77,6 +78,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     // What the user would pay by just going to the closest station: the
     // baseline every "you save X €" figure is measured against.
     final baseline = entries.isEmpty ? null : entries.first.cost.total;
+    final ads = InFeedAds(entries.length);
 
     switch (_sort) {
       case _NearbySort.realCost:
@@ -141,10 +143,11 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                 ? const _Message('Aucune station trouvée à proximité.')
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    itemCount: entries.length,
+                    itemCount: ads.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final e = entries[index];
+                      if (ads.isAd(index)) return const AdSlot();
+                      final e = entries[ads.itemIndex(index)];
                       return StationListTile(
                         station: e.station,
                         fuel: fuel,

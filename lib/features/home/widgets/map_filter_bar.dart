@@ -15,7 +15,7 @@ import '../../../providers/stations_provider.dart';
 import '../../../shared/widgets/brand_logo.dart';
 
 /// Each filter's icon gets its own fixed color so it reads as a small
-/// "logo" at a glance — the chips themselves stay black/white.
+/// "logo" at a glance — the chips themselves stay white/navy.
 class _FilterColors {
   static const stations = Color(0xFFE87722);
   static const bornes = Color(0xFF2F8F5B);
@@ -30,7 +30,7 @@ class _FilterColors {
   static const evNetwork = Color(0xFF8E24AA);
 }
 
-/// The horizontal filter row floating under the search bar: fuel stations
+/// The horizontal filter row floating over the map, under the search: fuel stations
 /// vs. EV chargers, then (for fuel stations) fuel type, brand, motorway and
 /// favorites-only refinements.
 class MapFilterBar extends ConsumerWidget {
@@ -40,82 +40,94 @@ class MapFilterBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final layer = ref.watch(mapLayerProvider);
 
+    // Posée entre la loupe et le compte : sa hauteur garde de la place pour
+    // l'ombre des pastilles, que la liste rognerait sinon, et un fondu sur
+    // chaque bord montre qu'elle défile au lieu de la trancher net.
     return SizedBox(
-      height: 38,
-      child: ScrollConfiguration(
-        behavior: _DragScrollBehavior(),
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          children: [
-            if (layer == null) ...[
-              // Nothing picked yet: show full labels as a clear call to
-              // action, instead of two unlabeled logos with no context.
-              _Pill(
-                selected: false,
-                icon: Icons.local_gas_station_rounded,
-                iconColor: _FilterColors.stations,
-                label: 'Stations',
-                onTap: () => ref.read(mapLayerProvider.notifier).state =
-                    MapLayer.stations,
-              ),
-              const SizedBox(width: 8),
-              _Pill(
-                selected: false,
-                icon: Icons.ev_station_rounded,
-                iconColor: _FilterColors.bornes,
-                label: 'Bornes électriques',
-                onTap: () =>
-                    ref.read(mapLayerProvider.notifier).state = MapLayer.bornes,
-              ),
-            ] else ...[
-              _LogoBadge(
-                icon: Icons.local_gas_station_rounded,
-                color: _FilterColors.stations,
-                selected: layer == MapLayer.stations,
-                tooltip: 'Stations',
-                onTap: () => ref.read(mapLayerProvider.notifier).state =
-                    MapLayer.stations,
-              ),
-              const SizedBox(width: 8),
-              _LogoBadge(
-                icon: Icons.ev_station_rounded,
-                color: _FilterColors.bornes,
-                selected: layer == MapLayer.bornes,
-                tooltip: 'Bornes électriques',
-                tintIcon: true,
-                onTap: () =>
-                    ref.read(mapLayerProvider.notifier).state = MapLayer.bornes,
-              ),
-            ],
-            if (layer == MapLayer.stations) ...[
-              const SizedBox(width: 12),
-              Container(width: 1, color: Colors.white.withValues(alpha: 0.4)),
-              const SizedBox(width: 12),
-              const _FuelChip(),
-              const SizedBox(width: 8),
-              const _BrandChip(),
-              const SizedBox(width: 8),
-              const _DepartmentChip(),
-              const SizedBox(width: 8),
-              const _AutorouteChip(),
-              const SizedBox(width: 8),
-              const _ServiceChip(),
-              const SizedBox(width: 8),
-              const _FavoritesChip(),
-            ],
-            if (layer == MapLayer.bornes) ...[
-              const SizedBox(width: 12),
-              Container(width: 1, color: Colors.white.withValues(alpha: 0.4)),
-              const SizedBox(width: 12),
-              const _PlugTypeChip(),
-              const SizedBox(width: 8),
-              const _EvNetworkChip(),
-              const SizedBox(width: 8),
-              const _FastChargeChip(),
-              const SizedBox(width: 8),
-              const _EvFreeChip(),
-            ],
+      height: 60,
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) => const LinearGradient(
+          colors: [
+            Colors.transparent,
+            Colors.black,
+            Colors.black,
+            Colors.transparent,
           ],
+          stops: [0, 0.04, 0.94, 1],
+        ).createShader(bounds),
+        child: ScrollConfiguration(
+          behavior: _DragScrollBehavior(),
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(8, 11, 12, 11),
+            children: [
+              if (layer == null) ...[
+                // Nothing picked yet: show full labels as a clear call to
+                // action, instead of two unlabeled logos with no context.
+                _Pill(
+                  selected: false,
+                  icon: Icons.local_gas_station_rounded,
+                  iconColor: _FilterColors.stations,
+                  label: 'Stations',
+                  onTap: () => ref.read(mapLayerProvider.notifier).state =
+                      MapLayer.stations,
+                ),
+                const SizedBox(width: 8),
+                _Pill(
+                  selected: false,
+                  icon: Icons.ev_station_rounded,
+                  iconColor: _FilterColors.bornes,
+                  label: 'Bornes électriques',
+                  onTap: () => ref.read(mapLayerProvider.notifier).state =
+                      MapLayer.bornes,
+                ),
+              ] else ...[
+                _LogoBadge(
+                  icon: Icons.local_gas_station_rounded,
+                  color: _FilterColors.stations,
+                  selected: layer == MapLayer.stations,
+                  tooltip: 'Stations',
+                  onTap: () => ref.read(mapLayerProvider.notifier).state =
+                      MapLayer.stations,
+                ),
+                const SizedBox(width: 8),
+                _LogoBadge(
+                  icon: Icons.ev_station_rounded,
+                  color: _FilterColors.bornes,
+                  selected: layer == MapLayer.bornes,
+                  tooltip: 'Bornes électriques',
+                  tintIcon: true,
+                  onTap: () => ref.read(mapLayerProvider.notifier).state =
+                      MapLayer.bornes,
+                ),
+              ],
+              if (layer == MapLayer.stations) ...[
+                const SizedBox(width: 14),
+                const _FuelChip(),
+                const SizedBox(width: 8),
+                const _BrandChip(),
+                const SizedBox(width: 8),
+                const _DepartmentChip(),
+                const SizedBox(width: 8),
+                const _AutorouteChip(),
+                const SizedBox(width: 8),
+                const _ServiceChip(),
+                const SizedBox(width: 8),
+                const _FavoritesChip(),
+              ],
+              if (layer == MapLayer.bornes) ...[
+                const SizedBox(width: 14),
+                const _PlugTypeChip(),
+                const SizedBox(width: 8),
+                const _EvNetworkChip(),
+                const SizedBox(width: 8),
+                const _FastChargeChip(),
+                const SizedBox(width: 8),
+                const _EvFreeChip(),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -134,9 +146,8 @@ class _DragScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
-/// A round "logo" badge: black icon on white, ringed in the filter's
-/// color — used for the always-icon-only filters (map layer, fuel type).
-/// Selected = solid ring, unselected = faint ring, so the row stays
+/// A round "logo" badge — used for the always-icon-only filters (map
+/// layer). Selected = filled navy, unselected = white, so the row stays
 /// compact without ever showing a label.
 class _LogoBadge extends StatelessWidget {
   const _LogoBadge({
@@ -164,21 +175,21 @@ class _LogoBadge extends StatelessWidget {
       onTap: onTap,
       child: Tooltip(
         message: tooltip,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
           width: 38,
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? color : Colors.white,
+            color: selected ? AppColors.primary : Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.black,
-              width: selected ? 2.5 : 1.2,
-            ),
+            boxShadow: _chipShadow,
           ),
           child: Icon(
             icon,
-            color: selected || !tintIcon ? Colors.black : color,
+            color: selected
+                ? Colors.white
+                : (tintIcon ? color : AppColors.primary),
             size: 18,
           ),
         ),
@@ -208,9 +219,6 @@ class _FuelChip extends ConsumerWidget {
   void _pickFuel(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -268,38 +276,69 @@ class _BrandChip extends ConsumerWidget {
     );
   }
 
-  /// Brands of the stations currently on screen, most common first.
-  List<(FuelBrand, int)> _visibleBrands(WidgetRef ref) {
+  /// Brands of the filtered stations, split into those on screen (with
+  /// their on-screen count) and the others (with their nationwide count),
+  /// each most common first. Off-screen brands stay pickable: the user
+  /// just has to zoom out to see them.
+  ({List<(FuelBrand, int)> visible, List<(FuelBrand, int)> elsewhere})
+  _brandsByVisibility(WidgetRef ref) {
     final brands =
         ref.read(stationBrandsProvider).valueOrNull ??
         const <String, FuelBrand>{};
     final bounds = ref.read(mapBoundsProvider);
-    final counts = <FuelBrand, int>{};
+    final visible = <FuelBrand, int>{};
+    final total = <FuelBrand, int>{};
     for (final s in ref.read(filteredStationsProvider)) {
-      if (bounds != null &&
-          (s.lat < bounds.south ||
-              s.lat > bounds.north ||
-              s.lng < bounds.west ||
-              s.lng > bounds.east)) {
-        continue;
-      }
       final b = brands[s.id];
-      if (b != null) counts[b] = (counts[b] ?? 0) + 1;
+      if (b == null) continue;
+      total[b] = (total[b] ?? 0) + 1;
+      if (bounds == null ||
+          (s.lat >= bounds.south &&
+              s.lat <= bounds.north &&
+              s.lng >= bounds.west &&
+              s.lng <= bounds.east)) {
+        visible[b] = (visible[b] ?? 0) + 1;
+      }
     }
-    return [for (final e in counts.entries) (e.key, e.value)]
-      ..sort((a, b) => b.$2.compareTo(a.$2));
+    List<(FuelBrand, int)> sorted(Iterable<MapEntry<FuelBrand, int>> e) =>
+        [for (final x in e) (x.key, x.value)]
+          ..sort((a, b) => b.$2.compareTo(a.$2));
+    return (
+      visible: sorted(visible.entries),
+      elsewhere: sorted(
+        total.entries.where((e) => !visible.containsKey(e.key)),
+      ),
+    );
   }
 
   void _pickBrand(BuildContext context, WidgetRef ref) {
-    final brands = _visibleBrands(ref);
+    final (:visible, :elsewhere) = _brandsByVisibility(ref);
     final selected = ref.read(selectedBrandProvider);
+    final muted = TextStyle(
+      fontSize: 12,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+    );
+
+    Widget chips(List<(FuelBrand, int)> list, BuildContext context) => Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final (b, count) in list)
+          ChoiceChip(
+            avatar: BrandLogo(brand: b, size: 22),
+            label: Text('${b.name} ($count)'),
+            selected: b.key == selected,
+            onSelected: (_) {
+              ref.read(selectedBrandProvider.notifier).state = b.key;
+              Navigator.of(context).pop();
+            },
+          ),
+      ],
+    );
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -316,38 +355,29 @@ class _BrandChip extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  "Enseignes d'après OpenStreetMap.",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface
-                        .withValues(alpha: 0.55),
-                  ),
-                ),
+                Text("Enseignes d'après OpenStreetMap.", style: muted),
                 const SizedBox(height: 12),
-                if (brands.isEmpty)
+                if (visible.isEmpty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text('Aucune enseigne connue sur cette zone.'),
                   )
                 else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final (b, count) in brands)
-                        ChoiceChip(
-                          avatar: BrandLogo(brand: b, size: 22),
-                          label: Text('${b.name} ($count)'),
-                          selected: b.key == selected,
-                          onSelected: (_) {
-                            ref.read(selectedBrandProvider.notifier).state =
-                                b.key;
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                    ],
+                  chips(visible, context),
+                if (elsewhere.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Autres enseignes',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Hors de la zone affichée : dézoomez pour les voir.',
+                    style: muted,
+                  ),
+                  const SizedBox(height: 12),
+                  chips(elsewhere, context),
+                ],
               ],
             ),
           ),
@@ -389,9 +419,6 @@ class _AutorouteChip extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -480,9 +507,6 @@ class _ServiceChip extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -577,9 +601,6 @@ class _DepartmentChip extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => _DepartmentPickerSheet(ref: ref),
     );
   }
@@ -697,9 +718,6 @@ class _PlugTypeChip extends ConsumerWidget {
   void _pickPlugType(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -769,9 +787,6 @@ class _EvNetworkChip extends ConsumerWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -881,42 +896,52 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? Colors.black : Colors.white;
-    return Material(
-      color: selected ? Colors.white : Colors.white.withValues(alpha: 0.14),
-      shape: StadiumBorder(
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+    final fg = selected ? Colors.white : AppColors.primary;
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(19)),
+        boxShadow: _chipShadow,
       ),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: iconColor ?? fg),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: fg,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                ),
-              ),
-              if (trailing != null) ...[
+      child: Material(
+        color: selected ? AppColors.primary : Colors.white,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: iconColor ?? fg),
                 const SizedBox(width: 6),
-                IconTheme(
-                  data: IconThemeData(color: fg),
-                  child: trailing!,
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: fg,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                  ),
                 ),
+                if (trailing != null) ...[
+                  const SizedBox(width: 6),
+                  IconTheme(
+                    data: IconThemeData(color: fg),
+                    child: trailing!,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+/// Ombre des pastilles de filtre, plus discrète que celle des boutons de la
+/// carte : elles sont nombreuses et côte à côte.
+const _chipShadow = [
+  BoxShadow(color: Color(0x1F000000), blurRadius: 10, offset: Offset(0, 3)),
+];

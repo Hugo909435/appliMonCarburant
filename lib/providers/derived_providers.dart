@@ -7,6 +7,8 @@ import 'ev_stations_provider.dart';
 import 'favorites_provider.dart';
 import 'filters_provider.dart';
 import 'location_provider.dart';
+import 'map_viewport_provider.dart';
+import 'station_brands_provider.dart';
 import 'stations_provider.dart';
 
 /// Fuel stations after every non-map-viewport filter (fuel type, highway,
@@ -44,6 +46,58 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
   return stations;
 });
 
+/// [filteredStationsProvider] narrowed to the selected brand, if any — what
+/// the map actually shows. Kept apart from it because the brand picker
+/// needs the brands of every station the other filters let through.
+final brandFilteredStationsProvider = Provider<List<Station>>((ref) {
+  final stations = ref.watch(filteredStationsProvider);
+  final brand = ref.watch(selectedBrandProvider);
+  if (brand == null) return stations;
+  final brands = ref.watch(stationBrandsProvider).valueOrNull ?? const {};
+  return stations.where((s) => brands[s.id]?.key == brand).toList();
+});
+
+/// A station of the home list, with its distance to the user when known.
+typedef ListedStation = ({Station station, double? distanceKm});
+
+/// The stations inside the map's visible area, in the order picked by
+/// [stationSortProvider]: the home screen's list, kept in step with the
+/// map as the user pans and zooms. Stations without a price for the
+/// selected fuel are already filtered out upstream.
+final viewportStationsProvider = Provider<List<ListedStation>>((ref) {
+  final bounds = ref.watch(mapBoundsProvider);
+  if (bounds == null) return const [];
+  final fuel = ref.watch(selectedFuelProvider);
+  final sort = ref.watch(stationSortProvider);
+  final position = ref.watch(userLocationProvider).valueOrNull;
+
+  final listed = <ListedStation>[
+    for (final s in ref.watch(brandFilteredStationsProvider))
+      if (s.lat >= bounds.south &&
+          s.lat <= bounds.north &&
+          s.lng >= bounds.west &&
+          s.lng <= bounds.east)
+        (
+          station: s,
+          distanceKm: position == null
+              ? null
+              : s.distanceKmTo(position.latitude, position.longitude),
+        ),
+  ];
+
+  int byPrice(ListedStation a, ListedStation b) =>
+      a.station.prices[fuel.code]!.compareTo(b.station.prices[fuel.code]!);
+  if (sort == StationSort.nearest && position != null) {
+    listed.sort((a, b) {
+      final d = a.distanceKm!.compareTo(b.distanceKm!);
+      return d != 0 ? d : byPrice(a, b);
+    });
+  } else {
+    listed.sort(byPrice);
+  }
+  return listed;
+});
+
 /// EV chargers after every filter (plug type, network, fast-charge-only,
 /// free-only). Shared by the map markers layer and the list view.
 final filteredEvStationsProvider = Provider<List<EvStation>>((ref) {
@@ -69,6 +123,44 @@ final filteredEvStationsProvider = Provider<List<EvStation>>((ref) {
     evStations = evStations.where((e) => e.free).toList();
   }
   return evStations;
+});
+
+/// An EV charger of the home list, with its distance to the user when known.
+typedef ListedEvStation = ({EvStation station, double? distanceKm});
+
+/// The EV chargers inside the map's visible area, in the order picked by
+/// [evSortProvider]: the home screen's list when the map shows chargers.
+final viewportEvStationsProvider = Provider<List<ListedEvStation>>((ref) {
+  final bounds = ref.watch(mapBoundsProvider);
+  if (bounds == null) return const [];
+  final sort = ref.watch(evSortProvider);
+  final position = ref.watch(userLocationProvider).valueOrNull;
+
+  final listed = <ListedEvStation>[
+    for (final e in ref.watch(filteredEvStationsProvider))
+      if (e.lat >= bounds.south &&
+          e.lat <= bounds.north &&
+          e.lng >= bounds.west &&
+          e.lng <= bounds.east)
+        (
+          station: e,
+          distanceKm: position == null
+              ? null
+              : e.distanceKmTo(position.latitude, position.longitude),
+        ),
+  ];
+
+  int byPower(ListedEvStation a, ListedEvStation b) =>
+      b.station.maxPowerKw.compareTo(a.station.maxPowerKw);
+  if (sort == EvSort.nearest && position != null) {
+    listed.sort((a, b) {
+      final d = a.distanceKm!.compareTo(b.distanceKm!);
+      return d != 0 ? d : byPower(a, b);
+    });
+  } else {
+    listed.sort(byPower);
+  }
+  return listed;
 });
 
 /// Stations sorted by distance to the user, closest first. Empty until

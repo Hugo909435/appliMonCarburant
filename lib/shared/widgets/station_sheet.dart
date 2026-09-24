@@ -22,6 +22,8 @@ Future<void> showStationSheet(BuildContext context, Station station) {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // La feuille dessine sa propre poignée, dans son propre fond.
+    showDragHandle: false,
     builder: (context) => DraggableScrollableSheet(
       initialChildSize: 0.5,
       minChildSize: 0.3,
@@ -68,7 +70,7 @@ class _StationSheetContent extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.lg),
+          top: Radius.circular(AppRadius.xl),
         ),
       ),
       child: ListView(

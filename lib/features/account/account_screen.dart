@@ -11,6 +11,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../data/services/auth_service.dart';
 import '../../providers/app_info_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../shared/widgets/settings_group.dart';
 import '../favorites/widgets/google_signin_web_button.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -83,29 +84,36 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Compte')),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          ...provider != null
-              ? _linkedContent(context, user, provider)
-              : _signInContent(context),
-          const SizedBox(height: 32),
-          const Divider(),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.directions_car_outlined),
-            title: const Text('Mon véhicule'),
-            subtitle: const Text('Consommation et taille du plein'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/vehicule'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: provider != null
+                    ? _linkedContent(context, user, provider)
+                    : _signInContent(context),
+              ),
+            ),
           ),
-          const Divider(),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('Confidentialité'),
-            subtitle: const Text('Données collectées et vos droits'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/confidentialite'),
+          const SizedBox(height: 28),
+          const SectionTitle('Réglages'),
+          SettingsGroup(
+            children: [
+              SettingsTile(
+                icon: Icons.directions_car_outlined,
+                title: 'Mon véhicule',
+                subtitle: 'Consommation et taille du plein',
+                onTap: () => context.push('/vehicule'),
+              ),
+              SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Confidentialité',
+                subtitle: 'Données collectées et vos droits',
+                onTap: () => context.push('/confidentialite'),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           Center(
@@ -124,33 +132,34 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     User? user,
     SignInProvider provider,
   ) {
+    final name = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : user?.email ?? 'Compte ${provider.label}';
     return [
       Row(
         children: [
-          const Icon(Icons.account_circle, size: 40),
-          const SizedBox(width: 12),
+          _Avatar(initial: name.characters.first.toUpperCase()),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(name, style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  user?.displayName?.isNotEmpty == true
-                      ? user!.displayName!
-                      : user?.email ?? 'Compte ${provider.label}',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  'Connecté avec ${provider.label}',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                Text('Connecté avec ${provider.label}'),
               ],
             ),
           ),
         ],
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 16),
       const Text(
         'Vos favoris sont synchronisés sur tous les appareils connectés '
         'avec ce compte.',
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 20),
       OutlinedButton.icon(
         onPressed: () => ref.read(authServiceProvider).signOut(),
         icon: const Icon(Icons.logout),
@@ -162,13 +171,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   List<Widget> _signInContent(BuildContext context) {
     final auth = ref.read(authServiceProvider);
     return [
-      const Icon(Icons.account_circle_outlined, size: 40),
+      const Align(alignment: Alignment.centerLeft, child: _Avatar()),
       const SizedBox(height: 16),
+      Text(
+        'Retrouvez vos favoris partout',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 4),
       const Text(
         "Vous utilisez l'app sans compte. Connectez-vous pour retrouver vos "
         'favoris sur tous vos appareils.',
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 20),
       if (AuthService.isAppleSignInSupported) ...[
         // Apple impose l'aspect de son bouton (forme, logo, libellé) et veut
         // le voir au moins aussi en évidence que les connexions tierces —
@@ -176,7 +190,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         SignInWithAppleButton(
           text: 'Se connecter avec Apple',
           height: 48,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
           style: Theme.of(context).brightness == Brightness.dark
               ? SignInWithAppleButtonStyle.white
               : SignInWithAppleButtonStyle.black,
@@ -209,5 +223,34 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         ),
       ],
     ];
+  }
+}
+
+/// Pastille ronde du profil : l'initiale du compte, ou une silhouette tant
+/// que l'on n'est pas connecté.
+class _Avatar extends StatelessWidget {
+  const _Avatar({this.initial});
+
+  final String? initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return CircleAvatar(
+      radius: 26,
+      backgroundColor: initial == null
+          ? scheme.surfaceContainer
+          : scheme.primary,
+      child: initial == null
+          ? Icon(Icons.person_rounded, color: scheme.onSurface, size: 26)
+          : Text(
+              initial!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+    );
   }
 }

@@ -14,6 +14,8 @@ import '../../providers/stations_provider.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fill_cost_card.dart';
 import '../../shared/widgets/price_totem.dart';
+import '../../shared/widgets/settings_group.dart';
+import '../../shared/widgets/ad_slot.dart';
 
 class StationDetailScreen extends ConsumerWidget {
   const StationDetailScreen({super.key, required this.stationId});
@@ -59,79 +61,86 @@ class StationDetailScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          Row(
-            children: [
-              StationBrandLogo(
-                stationId: station.id,
-                size: 44,
-                placeholder: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Icon(
-                    station.isAutoroute
-                        ? Icons.local_gas_station_rounded
-                        : Icons.local_gas_station_outlined,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (brand != null)
-                      Text(
-                        brand.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      StationBrandLogo(
+                        stationId: station.id,
+                        size: 52,
+                        placeholder: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.onSurface
+                                .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Icon(
+                            station.isAutoroute
+                                ? Icons.local_gas_station_rounded
+                                : Icons.local_gas_station_outlined,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                    Text(
-                      station.ville,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    Text(
-                      station.adresse,
-                      style: TextStyle(
-                        color: onSurface.withValues(alpha: 0.65),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (brand != null)
+                              Text(
+                                brand.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            Text(
+                              station.ville,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            Text(
+                              station.adresse,
+                              style: TextStyle(
+                                color: onSurface.withValues(alpha: 0.65),
+                              ),
+                            ),
+                            Text(
+                              [
+                                '${station.cp} ${station.ville}',
+                                if (distance != null)
+                                  'à ${formatDistance(distance)}',
+                              ].join(' · '),
+                              style: TextStyle(
+                                color: onSurface.withValues(alpha: 0.5),
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      [
-                        '${station.cp} ${station.ville}',
-                        if (distance != null) 'à ${formatDistance(distance)}',
-                      ].join(' · '),
-                      style: TextStyle(
-                        color: onSurface.withValues(alpha: 0.5),
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => _openDirections(station),
+                    icon: const Icon(Icons.directions_rounded),
+                    label: const Text('Itinéraire'),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => _openDirections(station),
-            icon: const Icon(Icons.directions_rounded),
-            label: const Text('Itinéraire'),
+            ),
           ),
           const SizedBox(height: 28),
-          Text(
-            'Prix des carburants',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
+          const SectionTitle('Prix des carburants'),
           Card(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -141,8 +150,8 @@ class StationDetailScreen extends ConsumerWidget {
                     if (station.prices.containsKey(fuel.code)) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         child: Row(
                           children: [
@@ -174,7 +183,7 @@ class StationDetailScreen extends ConsumerWidget {
                           FuelType.values.lastWhere(
                             (f) => station.prices.containsKey(f.code),
                           ))
-                        const Divider(height: 1, indent: 14, endIndent: 14),
+                        const Divider(height: 1, indent: 34, endIndent: 16),
                     ],
                 ],
               ),
@@ -196,8 +205,7 @@ class StationDetailScreen extends ConsumerWidget {
           ],
           if (station.horaires != null) ...[
             const SizedBox(height: 28),
-            Text('Horaires', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
+            const SectionTitle('Horaires'),
             Card(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -225,8 +233,7 @@ class StationDetailScreen extends ConsumerWidget {
           ],
           if (station.services.isNotEmpty) ...[
             const SizedBox(height: 28),
-            Text('Services', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
+            const SectionTitle('Services'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -239,6 +246,9 @@ class StationDetailScreen extends ConsumerWidget {
               ],
             ),
           ],
+          // Tout en bas, une fois la fiche lue : jamais entre le prix et le
+          // bouton Itinéraire.
+          if (AdSlot.isShown) ...[const SizedBox(height: 28), const AdSlot()],
         ],
       ),
     );

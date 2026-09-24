@@ -127,6 +127,8 @@ flutter:
     - assets/data/station_brands.json
     # Logos officiels optionnels : <clé>.png (voir lib/core/brands/brand_catalog.dart)
     - assets/logos/
+    # Logo de l'écran de chargement (lib/shared/widgets/loading_screen.dart)
+    - assets/branding/splash_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -164,15 +166,15 @@ flutter_launcher_icons:
   # évite un rejet automatique à l'envoi.
   remove_alpha_ios: true
   android: ic_launcher
-  adaptive_icon_background: "#111111"
+  adaptive_icon_background: "#0F2D3F"
   adaptive_icon_foreground: assets/branding/app_icon_foreground.png
   # Icône monochrome des thèmes dynamiques d'Android 13+.
-  adaptive_icon_monochrome: assets/branding/app_icon_foreground.png
+  adaptive_icon_monochrome: assets/branding/app_icon_monochrome.png
   web:
     generate: true
     image_path: assets/branding/app_icon.png
-    background_color: "#111111"
-    theme_color: "#111111"
+    background_color: "#0F2D3F"
+    theme_color: "#0F2D3F"
   windows:
     generate: true
     image_path: assets/branding/app_icon.png
@@ -181,15 +183,13 @@ flutter_launcher_icons:
 # Régénérer après tout changement de assets/branding/ :
 #   dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: assets/branding/splash_logo_light.png
-  color_dark: "#000000"
-  image_dark: assets/branding/splash_logo_dark.png
+  # Le bleu de la tuile du logo, en clair comme en sombre : la pompe blanche
+  # n'aurait aucun contraste sur un fond blanc.
+  color: "#0F2D3F"
+  image: assets/branding/splash_logo.png
   # Android 12+ impose son propre gabarit : le logo est posé dans un disque,
-  # d'où des images dédiées, plus petites dans un cadre plus grand.
+  # d'où une image dédiée, plus petite dans un cadre plus grand.
   android_12:
-    color: "#FFFFFF"
-    image: assets/branding/splash_logo_light_android12.png
-    color_dark: "#000000"
-    image_dark: assets/branding/splash_logo_dark_android12.png
+    color: "#0F2D3F"
+    image: assets/branding/splash_logo_android12.png
   web: false

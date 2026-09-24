@@ -51,6 +51,11 @@ class AppConfig {
     defaultValue: _defaultNominatimUrl,
   );
 
+  /// Active les emplacements publicitaires (voir `AdSlot`). Éteint par
+  /// défaut : tant qu'aucune régie n'est branchée, un build de release
+  /// n'affiche rien à leur place.
+  static const adsEnabled = bool.fromEnvironment('MC_ADS');
+
   /// Identifiant du paquet, transmis à flutter_map.
   static const packageName = 'com.moncarburant.monCarburantApp';
 

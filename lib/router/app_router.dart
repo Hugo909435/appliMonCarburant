@@ -17,36 +17,20 @@ import '../features/search/search_results_screen.dart';
 import '../features/station_detail/station_detail_screen.dart';
 import '../features/vehicle/vehicle_screen.dart';
 import '../providers/stats_provider.dart';
-import '../shared/widgets/main_shell.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _homeNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'home');
-final _favoritesNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'favoris');
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
   routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) =>
-          MainShell(navigationShell: navigationShell),
-      branches: [
-        StatefulShellBranch(
-          navigatorKey: _homeNavigatorKey,
-          routes: [
-            GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-          ],
-        ),
-        StatefulShellBranch(
-          navigatorKey: _favoritesNavigatorKey,
-          routes: [
-            GoRoute(
-              path: '/favoris',
-              builder: (context, state) => const FavoritesScreen(),
-            ),
-          ],
-        ),
-      ],
+    // Pas de barre d'onglets : la carte occupe tout l'écran et porte
+    // elle-même ses boutons (favoris, trajet, compte…), qui poussent leur
+    // écran par-dessus.
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/favoris',
+      builder: (context, state) => const FavoritesScreen(),
     ),
     GoRoute(
       parentNavigatorKey: _rootNavigatorKey,

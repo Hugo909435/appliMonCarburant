@@ -24,38 +24,49 @@ class VehicleScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mon véhicule')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           Text(
             "Ces réglages servent à calculer le coût réel d'un plein, trajet "
             "jusqu'à la station compris.",
             style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 24),
-          _SliderSetting(
-            label: 'Consommation',
-            valueLabel: '${_fmt(profile.consumptionL100)} L/100 km',
-            value: profile.consumptionL100,
-            min: 3,
-            max: 15,
-            divisions: 24,
-            onChanged: (v) =>
-                notifier.save(profile.copyWith(consumptionL100: v)),
-          ),
-          const SizedBox(height: 16),
-          _SliderSetting(
-            label: 'Quantité habituelle à chaque plein',
-            valueLabel: '${profile.fillLiters.round()} L',
-            value: profile.fillLiters,
-            min: 10,
-            max: 90,
-            divisions: 16,
-            onChanged: (v) => notifier.save(profile.copyWith(fillLiters: v)),
-          ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+              child: Column(
+                children: [
+                  _SliderSetting(
+                    label: 'Consommation',
+                    valueLabel: '${_fmt(profile.consumptionL100)} L/100 km',
+                    value: profile.consumptionL100,
+                    min: 3,
+                    max: 15,
+                    divisions: 24,
+                    onChanged: (v) =>
+                        notifier.save(profile.copyWith(consumptionL100: v)),
+                  ),
+                  const SizedBox(height: 16),
+                  _SliderSetting(
+                    label: 'Quantité habituelle à chaque plein',
+                    valueLabel: '${profile.fillLiters.round()} L',
+                    value: profile.fillLiters,
+                    min: 10,
+                    max: 90,
+                    divisions: 16,
+                    onChanged: (v) =>
+                        notifier.save(profile.copyWith(fillLiters: v)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            color: theme.colorScheme.surfaceContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
               child: Text(
                 'Exemple : une station à 5 km, à 1,80 €/L, vous coûte '
                 '${formatEuros(example.tripCost)} de trajet aller-retour '

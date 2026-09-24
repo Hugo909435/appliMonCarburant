@@ -6,14 +6,12 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/promo_annonce.dart';
 import '../../providers/promo_provider.dart';
 
-/// Bandeau d'annonce « prix coûtant », posé juste au-dessus de la barre de
-/// navigation.
+/// Bandeau d'annonce « prix coûtant », posé sur la carte juste sous les
+/// filtres.
 ///
 /// Volontairement pas une boîte de dialogue : rien à valider, rien qui
-/// bloque la carte, et il occupe une bande fine dans le flux plutôt que de
-/// flotter par-dessus le contenu (sinon il recouvrirait le bouton
-/// « Comparer » de l'accueil). Il se ferme d'une croix ou d'un balayage
-/// latéral, et ne revient plus pour la même campagne.
+/// bloque la carte, juste une carte fine. Il se ferme d'une croix ou d'un
+/// balayage latéral, et ne revient plus pour la même campagne.
 class PromoBanner extends ConsumerWidget {
   const PromoBanner({super.key});
 

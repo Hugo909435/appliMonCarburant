@@ -10,6 +10,7 @@ import '../../providers/stats_provider.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/stats_summary_card.dart';
 import '../../providers/filters_provider.dart';
+import '../../shared/widgets/ad_slot.dart';
 
 final _priceHistoryProvider = FutureProvider<List<PriceHistoryPoint>>((ref) {
   return ref.watch(priceHistoryServiceProvider).load();
@@ -115,6 +116,7 @@ class NationalPriceScreen extends ConsumerWidget {
               ),
             ),
           ),
+          if (AdSlot.isShown) ...[const SizedBox(height: 28), const AdSlot()],
         ],
       ),
     );

@@ -55,7 +55,8 @@ lib/
 ## Marque
 
 L'icône et l'écran de démarrage descendent tous d'un seul dessin vectoriel,
-dans `tool/generate_branding.dart`. Après l'avoir modifié :
+`assets/branding/logo.svg` (le même fichier que le favicon du site), lu par
+`tool/generate_branding.dart`. Après l'avoir modifié :
 
 ```bash
 flutter test tool/generate_branding.dart   # redessine assets/branding/

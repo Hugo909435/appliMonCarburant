@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/brands/brand_catalog.dart';
 import '../../core/theme/app_theme.dart';
@@ -23,10 +26,13 @@ import '../../providers/map_viewport_provider.dart';
 import '../../providers/station_brands_provider.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/price_totem.dart';
+import '../../shared/widgets/promo_banner.dart';
 import '../../shared/widgets/station_sheet.dart';
 import '../../core/config/app_config.dart';
 import 'widgets/ev_station_sheet.dart';
+import 'widgets/ev_station_tile.dart';
 import 'widgets/map_filter_bar.dart';
+import 'widgets/stations_sheet.dart';
 
 /// Below this zoom level the map is showing a wide area (region/country),
 /// where dozens of full price totems would just overlap into noise — show
@@ -37,6 +43,18 @@ const _detailZoomThreshold = 12.0;
 /// How far past the visible viewport (as a fraction of its span) to keep
 /// building station markers, so panning doesn't cause markers to pop in.
 const _viewportPadding = 0.3;
+
+/// From this zoom level on (street level), the viewport holds few enough
+/// stations to show every one of them, clustered where they overlap.
+/// Below it, [_thinOut] keeps only one station per screen cell so the map
+/// never builds more than a couple hundred markers, however far out it is.
+const _thinningMaxZoom = 15.0;
+
+/// Side, in screen pixels, of the grid cell holding at most one station
+/// while thinning: about a marker's footprint, so the kept markers barely
+/// overlap. Totems are wider than dots, hence the larger cell.
+const _dotCellPx = 44.0;
+const _totemCellPx = 88.0;
 
 /// Diamètre de la pastille d'enseigne montrée sous [_detailZoomThreshold].
 ///
@@ -68,11 +86,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
 
+  /// Whether the search is unfolded from its magnifier button.
+  final _searchExpanded = ValueNotifier<bool>(false);
+
   Timer? _boundsDebounce;
+
+  /// How much of the map the stations list sheet covers, as a fraction.
+  final _sheetExtent = ValueNotifier<double>(StationsSheet.initialFraction);
 
   @override
   void dispose() {
     _boundsDebounce?.cancel();
+    _sheetExtent.dispose();
+    _searchExpanded.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     _mapController.dispose();
@@ -93,6 +119,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _dismissResults() {
+    // Toucher la carte replie une recherche restée vide.
+    if (_searchController.text.isEmpty) _searchExpanded.value = false;
     if (ref.read(mapSearchProvider).isEmpty && !_searchFocus.hasFocus) return;
     _searchFocus.unfocus();
     ref.read(mapSearchProvider.notifier).clear();
@@ -100,17 +128,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
     _boundsDebounce?.cancel();
-    _boundsDebounce = Timer(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-      final bounds = camera.visibleBounds;
-      ref.read(mapBoundsProvider.notifier).state = MapBounds(
-        south: bounds.south,
-        west: bounds.west,
-        north: bounds.north,
-        east: bounds.east,
-      );
-      ref.read(mapZoomProvider.notifier).state = camera.zoom;
+    _boundsDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _publishCamera(camera);
     });
+  }
+
+  void _publishCamera(MapCamera camera) {
+    final bounds = camera.visibleBounds;
+    ref.read(mapBoundsProvider.notifier).state = MapBounds(
+      south: bounds.south,
+      west: bounds.west,
+      north: bounds.north,
+      east: bounds.east,
+    );
+    ref.read(mapZoomProvider.notifier).state = camera.zoom;
   }
 
   Future<void> _locateMe() async {
@@ -143,196 +174,323 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final comparisonCount = ref.watch(
       comparisonProvider.select((ids) => ids.length),
     );
+    final topInset = MediaQuery.paddingOf(context).top;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Column(
-        children: [
-          _TopBar(
-            searchController: _searchController,
-            searchFocus: _searchFocus,
-            searching: search.searching,
-            results: search.results,
-            locationLoading: locationLoading,
-            onQueryChanged: ref.read(mapSearchProvider.notifier).onQueryChanged,
-            onClearSearch: _clearSearch,
-            onSelectResult: _selectResult,
-            onLocate: _locateMe,
-            onRoute: () => context.push('/trajet'),
-            onAccount: () => context.push('/compte'),
-          ),
-          Expanded(
-            child: Stack(
+    // La carte passe sous la barre d'état : ses icônes doivent rester
+    // sombres, les tuiles étant claires quel que soit le thème.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: position != null
+                    ? ll.LatLng(position.latitude, position.longitude)
+                    : HomeScreen._franceCenter,
+                initialZoom: position != null ? 12 : 5.5,
+                onTap: (_, _) => _dismissResults(),
+                onPositionChanged: _onPositionChanged,
+                // Publish the viewport as soon as the map is laid out: until
+                // then the markers layer has no bounds to cull to and would
+                // build every station in France.
+                onMapReady: () => _publishCamera(_mapController.camera),
+              ),
               children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: position != null
-                        ? ll.LatLng(position.latitude, position.longitude)
-                        : HomeScreen._franceCenter,
-                    initialZoom: position != null ? 12 : 5.5,
-                    onTap: (_, _) => _dismissResults(),
-                    onPositionChanged: _onPositionChanged,
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: AppConfig.tileUrlTemplate,
-                      userAgentPackageName: AppConfig.packageName,
-                    ),
-                    if (layer == MapLayer.stations)
-                      const _StationMarkersLayer()
-                    else if (layer == MapLayer.bornes)
-                      const _EvMarkersLayer(),
-                    if (position != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: ll.LatLng(
-                              position.latitude,
-                              position.longitude,
-                            ),
-                            width: 24,
-                            height: 24,
-                            child: const Icon(
-                              Icons.my_location,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    RichAttributionWidget(
-                      alignment: AttributionAlignment.bottomLeft,
-                      attributions: [
-                        const TextSourceAttribution(
-                          '© OpenStreetMap contributors',
-                        ),
-                        if (layer == MapLayer.bornes)
-                          const TextSourceAttribution('IRVE · data.gouv.fr'),
-                      ],
-                    ),
-                  ],
+                TileLayer(
+                  urlTemplate: AppConfig.tileUrlTemplate,
+                  userAgentPackageName: AppConfig.packageName,
                 ),
+                if (layer == MapLayer.stations)
+                  const _StationMarkersLayer()
+                else if (layer == MapLayer.bornes)
+                  const _EvMarkersLayer(),
                 if (position != null)
-                  Positioned(
-                    left: 12,
-                    top: 12,
-                    child: ActionChip(
-                      avatar: const Icon(Icons.savings_outlined, size: 18),
-                      label: const Text('Le plus rentable autour de moi'),
-                      backgroundColor: Colors.white,
-                      elevation: 3,
-                      onPressed: () => context.push('/pres-de-moi'),
-                    ),
-                  ),
-                if (comparisonCount > 0)
-                  Positioned(
-                    right: 16,
-                    bottom: 16,
-                    child: FloatingActionButton.extended(
-                      heroTag: 'compare-fab',
-                      backgroundColor: Colors.black,
-                      onPressed: () => context.push('/comparer'),
-                      icon: CircleAvatar(
-                        radius: 11,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          '$comparisonCount',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: ll.LatLng(position.latitude, position.longitude),
+                        width: 22,
+                        height: 22,
+                        child: const _UserDot(),
                       ),
-                      label: const Text('Comparer'),
-                    ),
+                    ],
                   ),
               ],
             ),
-          ),
-        ],
+            // La liste s'arrête sous la ligne de recherche : ouverte en
+            // grand, elle recouvre les filtres (qui s'effacent) mais jamais
+            // la recherche ni le compte.
+            Positioned.fill(
+              top: topInset + _searchRowHeight,
+              child: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  children: [
+                    ValueListenableBuilder<double>(
+                      valueListenable: _sheetExtent,
+                      builder: (context, extent, child) {
+                        final hidden = extent > 0.6;
+                        return Positioned(
+                          left: 12,
+                          right: 12,
+                          bottom: extent * constraints.maxHeight + 12,
+                          child: IgnorePointer(
+                            ignoring: hidden,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 150),
+                              opacity: hidden ? 0 : 1,
+                              child: child,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _BottomControls(
+                        ev: layer == MapLayer.bornes,
+                        showNearby: position != null,
+                        comparisonCount: comparisonCount,
+                        locationLoading: locationLoading,
+                        onLocate: _locateMe,
+                      ),
+                    ),
+                    StationsSheet(
+                      availableHeight: constraints.maxHeight,
+                      extent: _sheetExtent,
+                      ev: layer == MapLayer.bornes,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Une seule ligne : loupe, filtres qui défilent entre les
+                    // deux, compte. Dépliée, la recherche recouvre les filtres.
+                    SizedBox(
+                      height: _searchRowHeight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Stack(
+                                alignment: Alignment.centerLeft,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: _topButtonSize,
+                                    ),
+                                    child: ValueListenableBuilder<bool>(
+                                      valueListenable: _searchExpanded,
+                                      builder: (context, expanded, child) =>
+                                          IgnorePointer(
+                                            ignoring: expanded,
+                                            child: AnimatedOpacity(
+                                              duration: const Duration(
+                                                milliseconds: 150,
+                                              ),
+                                              opacity: expanded ? 0 : 1,
+                                              child: child,
+                                            ),
+                                          ),
+                                      child: const MapFilterBar(),
+                                    ),
+                                  ),
+                                  _ExpandingSearch(
+                                    expanded: _searchExpanded,
+                                    controller: _searchController,
+                                    focusNode: _searchFocus,
+                                    searching: search.searching,
+                                    onChanged: ref
+                                        .read(mapSearchProvider.notifier)
+                                        .onQueryChanged,
+                                    onClear: _clearSearch,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            _MapButton(
+                              icon: Icons.person_rounded,
+                              tooltip: 'Compte',
+                              size: _topButtonSize,
+                              onTap: () => context.push('/compte'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (search.results.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: _SearchResultsList(
+                          results: search.results,
+                          onSelect: _selectResult,
+                        ),
+                      ),
+                    ValueListenableBuilder<double>(
+                      valueListenable: _sheetExtent,
+                      builder: (context, extent, child) {
+                        final hidden =
+                            search.results.isNotEmpty || extent > 0.6;
+                        return IgnorePointer(
+                          ignoring: hidden,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 150),
+                            opacity: hidden ? 0 : 1,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: const PromoBanner(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Fixed black header above the map: search, locate-me, account, then the
-/// filter row — deliberately not floating over the map tiles.
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.searchController,
-    required this.searchFocus,
-    required this.searching,
-    required this.results,
+/// Hauteur de la ligne du haut (recherche, filtres, compte), marges
+/// comprises : de quoi laisser passer l'ombre des pastilles.
+const _searchRowHeight = 60.0;
+
+/// Côté des boutons de la ligne du haut, aligné sur la hauteur des filtres.
+const _topButtonSize = 40.0;
+
+/// Ombre commune des commandes posées sur la carte : large et diffuse
+/// plutôt qu'un liseré, pour qu'elles flottent sans alourdir.
+const _floatingShadow = [
+  BoxShadow(color: Color(0x24000000), blurRadius: 18, offset: Offset(0, 6)),
+];
+
+/// Les commandes du bas de la carte, juste au-dessus de la liste : à gauche
+/// les raccourcis contextuels, à droite la colonne de navigation.
+class _BottomControls extends StatelessWidget {
+  const _BottomControls({
+    required this.ev,
+    required this.showNearby,
+    required this.comparisonCount,
     required this.locationLoading,
-    required this.onQueryChanged,
-    required this.onClearSearch,
-    required this.onSelectResult,
     required this.onLocate,
-    required this.onRoute,
-    required this.onAccount,
   });
 
-  final TextEditingController searchController;
-  final FocusNode searchFocus;
-  final bool searching;
-  final List<SearchHit> results;
+  final bool ev;
+  final bool showNearby;
+  final int comparisonCount;
   final bool locationLoading;
-  final ValueChanged<String> onQueryChanged;
-  final VoidCallback onClearSearch;
-  final ValueChanged<SearchHit> onSelectResult;
   final VoidCallback onLocate;
-  final VoidCallback onRoute;
-  final VoidCallback onAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (comparisonCount > 0) ...[
+                _MapPill(
+                  onTap: () => context.push('/comparer'),
+                  dark: true,
+                  leading: CircleAvatar(
+                    radius: 10,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      '$comparisonCount',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  label: 'Comparer',
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (showNearby) ...[
+                _MapPill(
+                  onTap: () => context.push('/pres-de-moi'),
+                  leading: const Icon(
+                    Icons.savings_outlined,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  label: 'Le plus rentable autour de moi',
+                ),
+                const SizedBox(height: 10),
+              ],
+              _MapAttribution(ev: ev),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MapButtonGroup(
+              children: [
+                _MapButton(
+                  icon: Icons.star_rounded,
+                  tooltip: 'Favoris',
+                  flat: true,
+                  onTap: () => context.push('/favoris'),
+                ),
+                _MapButton(
+                  icon: Icons.alt_route_rounded,
+                  tooltip: 'Trajet',
+                  flat: true,
+                  onTap: () => context.push('/trajet'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _MapButton(
+              icon: Icons.near_me_rounded,
+              tooltip: 'Me localiser',
+              loading: locationLoading,
+              onTap: onLocate,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Position de l'utilisateur : un point bleu cerclé de blanc, à la manière
+/// des applications de cartographie, plutôt qu'une icône de viseur.
+class _UserDot extends StatelessWidget {
+  const _UserDot();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _SearchField(
-                      controller: searchController,
-                      focusNode: searchFocus,
-                      searching: searching,
-                      onChanged: onQueryChanged,
-                      onClear: onClearSearch,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _RoundIconButton(
-                    icon: Icons.my_location_rounded,
-                    loading: locationLoading,
-                    onTap: onLocate,
-                  ),
-                  const SizedBox(width: 8),
-                  _RoundIconButton(
-                    icon: Icons.alt_route_rounded,
-                    onTap: onRoute,
-                  ),
-                  const SizedBox(width: 8),
-                  _RoundIconButton(
-                    icon: Icons.person_rounded,
-                    onTap: onAccount,
-                  ),
-                ],
-              ),
-              if (results.isNotEmpty)
-                _SearchResultsList(results: results, onSelect: onSelectResult),
-              const SizedBox(height: 10),
-              const MapFilterBar(),
-            ],
-          ),
-        ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A73E8),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: const [
+          BoxShadow(color: Color(0x401A73E8), spreadRadius: 8),
+          BoxShadow(color: Colors.black26, blurRadius: 4),
+        ],
       ),
     );
   }
@@ -343,70 +501,76 @@ class _StationMarkersLayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    var stations = ref.watch(filteredStationsProvider);
+    var stations = ref.watch(brandFilteredStationsProvider);
     final fuel = ref.watch(selectedFuelProvider);
     final favoriteIds =
         ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
-    final selectedBrand = ref.watch(selectedBrandProvider);
     final brands =
         ref.watch(stationBrandsProvider).valueOrNull ??
         const <String, FuelBrand>{};
     final bounds = ref.watch(mapBoundsProvider);
     final zoom = ref.watch(mapZoomProvider);
 
-    // Only build markers for stations near the visible viewport (plus a
-    // padding margin): with the full national dataset otherwise reclustered
-    // on every pan, this is what keeps panning/zooming smooth.
-    if (bounds != null) {
-      final padded = bounds.expanded(_viewportPadding);
-      stations = stations
-          .where(
-            (s) =>
-                s.lat >= padded.south &&
-                s.lat <= padded.north &&
-                s.lng >= padded.west &&
-                s.lng <= padded.east,
-          )
-          .toList();
-    }
+    // No viewport yet (map not laid out): building markers for the whole
+    // national dataset here is what used to stall the first load.
+    if (bounds == null || zoom == null) return const SizedBox.shrink();
 
-    if (selectedBrand != null) {
-      stations = stations
-          .where((s) => brands[s.id]?.key == selectedBrand)
-          .toList();
-    }
+    // Only build markers for stations near the visible viewport (plus a
+    // padding margin).
+    final padded = bounds.expanded(_viewportPadding);
+    stations = stations
+        .where(
+          (s) =>
+              s.lat >= padded.south &&
+              s.lat <= padded.north &&
+              s.lng >= padded.west &&
+              s.lng <= padded.east,
+        )
+        .toList();
 
     // Zoomed out over a region/the whole country: full price totems would
     // just overlap into noise, so show compact dots until the user zooms in
     // enough to make out individual stations.
-    final showDetail = zoom == null || zoom >= _detailZoomThreshold;
+    final showDetail = zoom >= _detailZoomThreshold;
+
+    Marker markerFor(Station station) => Marker(
+      point: ll.LatLng(station.lat, station.lng),
+      width: showDetail ? 92 : _dotMarkerSize,
+      height: showDetail ? 44 : _dotMarkerSize,
+      child: showDetail
+          ? _StationMarker(
+              station: station,
+              fuel: fuel,
+              brand: brands[station.id],
+              isFavorite: favoriteIds.contains(station.id),
+              onTap: () => showStationSheet(context, station),
+            )
+          : _StationDot(
+              color: fuel.color,
+              brand: brands[station.id],
+              isFavorite: favoriteIds.contains(station.id),
+              onTap: () => showStationSheet(context, station),
+            ),
+    );
+
+    // Zoomed out: show only the cheapest station of each screen cell, and
+    // let more appear as the user zooms in and the cells shrink on the map.
+    if (zoom < _thinningMaxZoom) {
+      final kept = _thinOut(
+        stations,
+        zoom: zoom,
+        cellPx: showDetail ? _totemCellPx : _dotCellPx,
+        fuelCode: fuel.code,
+        favoriteIds: favoriteIds,
+      );
+      return MarkerLayer(markers: [for (final s in kept) markerFor(s)]);
+    }
 
     return MarkerClusterLayerWidget(
       options: MarkerClusterLayerOptions(
         maxClusterRadius: 60,
         size: const Size(40, 40),
-        markers: [
-          for (final station in stations)
-            Marker(
-              point: ll.LatLng(station.lat, station.lng),
-              width: showDetail ? 92 : _dotMarkerSize,
-              height: showDetail ? 44 : _dotMarkerSize,
-              child: showDetail
-                  ? _StationMarker(
-                      station: station,
-                      fuel: fuel,
-                      brand: brands[station.id],
-                      isFavorite: favoriteIds.contains(station.id),
-                      onTap: () => showStationSheet(context, station),
-                    )
-                  : _StationDot(
-                      color: fuel.color,
-                      brand: brands[station.id],
-                      isFavorite: favoriteIds.contains(station.id),
-                      onTap: () => showStationSheet(context, station),
-                    ),
-            ),
-        ],
+        markers: [for (final station in stations) markerFor(station)],
         builder: (context, markers) => CircleAvatar(
           backgroundColor: AppColors.primary,
           child: Text(
@@ -420,6 +584,43 @@ class _StationMarkersLayer extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Keeps at most one station per [cellPx]-wide square of the screen at
+/// [zoom] — the cheapest for [fuelCode] — plus every favorite.
+///
+/// The grid is laid on the Web Mercator world at the whole zoom level, not
+/// on the viewport, so panning doesn't reshuffle which station a cell keeps.
+List<Station> _thinOut(
+  List<Station> stations, {
+  required double zoom,
+  required double cellPx,
+  required String fuelCode,
+  required Set<String> favoriteIds,
+}) {
+  final worldPx = 256 * math.pow(2, zoom.floor());
+  final cheapest = <(int, int), Station>{};
+  final kept = <Station>[];
+  for (final s in stations) {
+    if (favoriteIds.contains(s.id)) {
+      kept.add(s);
+      continue;
+    }
+    final latRad = s.lat * math.pi / 180;
+    final x = (s.lng + 180) / 360 * worldPx;
+    final y =
+        (1 - math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) /
+        2 *
+        worldPx;
+    final cell = ((x / cellPx).floor(), (y / cellPx).floor());
+    final current = cheapest[cell];
+    final price = s.prices[fuelCode] ?? double.infinity;
+    if (current == null ||
+        price < (current.prices[fuelCode] ?? double.infinity)) {
+      cheapest[cell] = s;
+    }
+  }
+  return kept..addAll(cheapest.values);
 }
 
 class _EvMarkersLayer extends ConsumerWidget {
@@ -586,12 +787,6 @@ class _EvMarker extends StatelessWidget {
   final EvStation station;
   final VoidCallback onTap;
 
-  Color get _powerColor {
-    if (station.maxPowerKw >= 100) return const Color(0xFFD81B60);
-    if (station.maxPowerKw >= 22) return const Color(0xFFFB8C00);
-    return const Color(0xFF2F8F5B);
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -601,7 +796,7 @@ class _EvMarker extends StatelessWidget {
         height: 34,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _powerColor,
+          color: evPowerColor(station.maxPowerKw),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 2),
           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3)],
@@ -612,43 +807,188 @@ class _EvMarker extends StatelessWidget {
   }
 }
 
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.onTap,
-    this.loading = false,
-  });
+/// Credits the map data sources, as OpenStreetMap's licence requires. A
+/// small pill rather than flutter_map's corner widget, which the list sheet
+/// would cover.
+class _MapAttribution extends StatelessWidget {
+  const _MapAttribution({required this.ev});
 
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool loading;
+  /// Whether the EV chargers layer (IRVE open data) is showing.
+  final bool ev;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 4,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: loading ? null : onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: loading
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(icon, color: AppColors.primary),
+    return GestureDetector(
+      onTap: () => launchUrl(
+        Uri.parse('https://www.openstreetmap.org/copyright'),
+        mode: LaunchMode.externalApplication,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.75),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          ev
+              ? '© OpenStreetMap · IRVE data.gouv.fr'
+              : '© OpenStreetMap contributors',
+          style: const TextStyle(fontSize: 10.5, color: Colors.black87),
         ),
       ),
     );
   }
 }
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({
+/// Bouton rond blanc posé sur la carte. [flat] le rend sans fond ni ombre,
+/// pour l'aligner dans un [_MapButtonGroup].
+class _MapButton extends StatelessWidget {
+  const _MapButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.loading = false,
+    this.flat = false,
+    this.size = 48,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool loading;
+  final bool flat;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Tooltip(
+      message: tooltip,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: loading ? null : onTap,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: loading
+              ? const Padding(
+                  padding: EdgeInsets.all(15),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.primary,
+                  ),
+                )
+              : Icon(icon, color: AppColors.primary, size: size * 0.46),
+        ),
+      ),
+    );
+    if (flat) return Material(type: MaterialType.transparency, child: button);
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: _floatingShadow,
+      ),
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        child: button,
+      ),
+    );
+  }
+}
+
+/// Plusieurs [_MapButton] empilés dans une même gélule blanche.
+class _MapButtonGroup extends StatelessWidget {
+  const _MapButtonGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: _floatingShadow,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 24,
+                height: 1,
+                color: AppColors.primary.withValues(alpha: 0.1),
+              ),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Gélule d'action posée sur la carte : blanche, ou bleu nuit ([dark]) pour
+/// l'action du moment.
+class _MapPill extends StatelessWidget {
+  const _MapPill({
+    required this.onTap,
+    required this.leading,
+    required this.label,
+    this.dark = false,
+  });
+
+  final VoidCallback onTap;
+  final Widget leading;
+  final String label;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(22)),
+        boxShadow: _floatingShadow,
+      ),
+      child: Material(
+        color: dark ? AppColors.primary : Colors.white,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                leading,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: dark ? Colors.white : AppColors.primary,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La recherche, repliée en simple bouton loupe : elle se déplie sur toute
+/// la largeur au toucher, et se replie quand on la quitte sans rien y avoir
+/// laissé.
+class _ExpandingSearch extends StatefulWidget {
+  const _ExpandingSearch({
+    required this.expanded,
     required this.controller,
     required this.focusNode,
     required this.searching,
@@ -656,6 +996,10 @@ class _SearchField extends StatelessWidget {
     required this.onClear,
   });
 
+  /// Dépliée ou non : tenu par l'écran, qui la replie quand on touche la
+  /// carte. Pas de repli sur perte de focus : sur le web, le clic même qui
+  /// la déplie fait perdre le focus au champ tout juste créé.
+  final ValueNotifier<bool> expanded;
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool searching;
@@ -663,43 +1007,164 @@ class _SearchField extends StatelessWidget {
   final VoidCallback onClear;
 
   @override
+  State<_ExpandingSearch> createState() => _ExpandingSearchState();
+}
+
+class _ExpandingSearchState extends State<_ExpandingSearch> {
+  static const _duration = Duration(milliseconds: 280);
+
+  bool get _expanded => widget.expanded.value;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.expanded.addListener(_onExpandedChange);
+  }
+
+  @override
+  void dispose() {
+    widget.expanded.removeListener(_onExpandedChange);
+    super.dispose();
+  }
+
+  void _onExpandedChange() {
+    setState(() {});
+    if (!_expanded) widget.focusNode.unfocus();
+  }
+
+  void _expand() {
+    widget.expanded.value = true;
+    // Le champ existe dès l'image suivante : le focus est pris tout de
+    // suite, sans attendre la fin de l'animation, pour ne perdre aucune
+    // frappe.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => widget.focusNode.requestFocus(),
+    );
+  }
+
+  void _close() {
+    widget.onClear();
+    widget.expanded.value = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      color: Colors.white,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: 'Adresse, ville ou code postal…',
-          prefixIcon: const Icon(Icons.search_rounded),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            borderSide: BorderSide.none,
+    return LayoutBuilder(
+      builder: (context, constraints) => Align(
+        alignment: Alignment.centerLeft,
+        child: AnimatedContainer(
+          duration: _duration,
+          curve: Curves.easeOutCubic,
+          width: _expanded ? constraints.maxWidth : _topButtonSize,
+          height: _topButtonSize,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.all(Radius.circular(_topButtonSize / 2)),
+            boxShadow: _floatingShadow,
           ),
-          suffixIcon: searching
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) => value.text.isEmpty
-                      ? const SizedBox.shrink()
-                      : IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: onClear,
-                        ),
-                ),
+          child: Material(
+            type: MaterialType.transparency,
+            // Le champ est dessiné à sa largeur finale et rogné pendant que
+            // la gélule s'élargit : il se dévoile au lieu de déborder.
+            child: _expanded
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(_topButtonSize / 2),
+                    ),
+                    child: OverflowBox(
+                      alignment: Alignment.centerLeft,
+                      minWidth: constraints.maxWidth,
+                      maxWidth: constraints.maxWidth,
+                      child: _field(context),
+                    ),
+                  )
+                : _button(),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _button() => Tooltip(
+    message: 'Rechercher',
+    child: InkWell(
+      customBorder: const CircleBorder(),
+      onTap: _expand,
+      child: const Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: _topButtonSize,
+          height: _topButtonSize,
+          child: Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
+        ),
+      ),
+    ),
+  );
+
+  Widget _field(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      children: [
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          iconSize: 20,
+          tooltip: 'Fermer la recherche',
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: AppColors.primary,
+          onPressed: _close,
+        ),
+        Expanded(
+          child: TextField(
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            onChanged: widget.onChanged,
+            textInputAction: TextInputAction.search,
+            cursorColor: AppColors.primary,
+            style: textTheme.bodyLarge?.copyWith(color: AppColors.primary),
+            decoration: InputDecoration(
+              hintText: 'Adresse, ville ou code postal…',
+              hintStyle: textTheme.bodyLarge?.copyWith(
+                color: AppColors.primary.withValues(alpha: 0.45),
+              ),
+              filled: false,
+              isCollapsed: true,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+            ),
+          ),
+        ),
+        if (widget.searching)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+          )
+        else
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: widget.controller,
+            builder: (context, value, _) => value.text.isEmpty
+                ? const SizedBox(width: 12)
+                : IconButton(
+                    visualDensity: VisualDensity.compact,
+                    iconSize: 18,
+                    tooltip: 'Effacer',
+                    icon: const Icon(Icons.close_rounded),
+                    color: AppColors.primary.withValues(alpha: 0.6),
+                    onPressed: () {
+                      widget.controller.clear();
+                      widget.onChanged('');
+                      widget.focusNode.requestFocus();
+                    },
+                  ),
+          ),
+      ],
     );
   }
 }
@@ -712,23 +1177,37 @@ class _SearchResultsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: _floatingShadow,
+      ),
       child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        color: Theme.of(context).colorScheme.surface,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        // Blanc fixe, comme la gélule de recherche au-dessus : les commandes
+        // posées sur la carte ne suivent pas le thème (voir AppColors).
+        color: Colors.white,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 280),
           child: ListView.separated(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             itemCount: results.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              indent: 56,
+              color: AppColors.primary.withValues(alpha: 0.08),
+            ),
             itemBuilder: (context, index) {
               final result = results[index];
               final isStation = result.kind == SearchHitKind.station;
               return ListTile(
+                iconColor: AppColors.primary,
+                textColor: AppColors.primary,
+                subtitleTextStyle: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: AppColors.primary.withValues(alpha: 0.6)),
                 leading: Icon(
                   isStation
                       ? Icons.local_gas_station_rounded

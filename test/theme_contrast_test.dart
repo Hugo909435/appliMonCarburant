@@ -19,9 +19,9 @@ double _contrast(Color a, Color b) {
 /// Seuil WCAG AA pour un élément graphique non textuel.
 const _minIconContrast = 3.0;
 
-/// La charte est monochrome : le noir de la palette (#111111) est à un cheveu
-/// du fond sombre (#000000/#161616). Une couleur d'icône écrite en dur plutôt
-/// que laissée au thème y tombe à 1,04:1 — invisible.
+/// L'encre de la charte, un bleu nuit (#0F2D3F), est à un cheveu du fond
+/// sombre (#070D12/#111B22). Une couleur d'icône écrite en dur plutôt
+/// que laissée au thème y tombe sous 1,5:1 — invisible.
 ///
 /// Ces tests mesurent la couleur *effective* reçue par une icône posée dans un
 /// `ListTile` ou un `Chip`, c'est-à-dire ce que voit l'utilisateur, et non ce

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Monochrome palette: black, white, grays only. Fuel-type color-coding
-/// (see fuel_colors.dart) is kept as a functional exception — it's how
-/// drivers tell fuels apart at a glance on the map, not site branding.
+/// Palette sobre tirée du logo : le bleu nuit de sa tuile (#0F2D3F) remplace
+/// le noir comme encre de marque, et les gris sont très légèrement bleutés
+/// pour s'y accorder. L'orange du logo reste *réservé au logo* : repris dans
+/// l'interface, il ferait concurrence aux couleurs de carburant et aux
+/// signaux bon/mauvais. Fuel-type color-coding (see fuel_colors.dart) is kept
+/// as a functional exception — it's how drivers tell fuels apart at a glance
+/// on the map, not site branding.
 ///
 /// Ces constantes ne servent qu'à ce qui est dessiné **par-dessus la carte**
 /// (marqueurs, totems de prix, boutons flottants, tracé d'itinéraire) : les
@@ -12,21 +16,28 @@ import 'package:google_fonts/google_fonts.dart';
 ///
 /// Tout ce qui est posé sur une surface du thème — ListTile, Chip, carte,
 /// feuille — doit prendre sa couleur dans `Theme.of(context).colorScheme`.
-/// [primary] et [accent] valent #111111 : sur le fond sombre (#000000 /
-/// #161616) le contraste tombe à 1,04:1, et l'élément disparaît.
+/// [primary] et [accent] sont un bleu très sombre : sur le fond sombre le
+/// contraste tombe sous 1,5:1, et l'élément disparaît.
 /// `test/theme_contrast_test.dart` verrouille cette règle.
 class AppColors {
-  static const primary = Color(0xFF111111);
-  static const primaryLight = Color(0xFF2B2B2B);
-  static const accent = Color(0xFF111111);
+  /// Bleu nuit de la tuile du logo.
+  static const primary = Color(0xFF0F2D3F);
+  static const primaryLight = Color(0xFF1E4760);
+  static const accent = Color(0xFF0F2D3F);
 
-  static const backgroundLight = Color(0xFFFFFFFF);
+  // Même logique que sur la carte : des cartes blanches qui se détachent
+  // d'un fond à peine grisé, plutôt que des cadres tracés sur du blanc.
+  static const backgroundLight = Color(0xFFF3F5F7);
   static const surfaceLight = Color(0xFFFFFFFF);
-  static const outlineLight = Color(0xFFDDDDDD);
+  static const surfaceContainerLight = Color(0xFFE9EEF1);
+  static const outlineLight = Color(0xFFDCE2E6);
 
-  static const backgroundDark = Color(0xFF000000);
-  static const surfaceDark = Color(0xFF161616);
-  static const outlineDark = Color(0xFF2E2E2E);
+  // Presque noir, à peine teinté de bleu : un noir pur ferait paraître les
+  // boutons bleu nuit ternes par contraste.
+  static const backgroundDark = Color(0xFF070D12);
+  static const surfaceDark = Color(0xFF111B22);
+  static const surfaceContainerDark = Color(0xFF1B2832);
+  static const outlineDark = Color(0xFF243440);
 
   /// Functional exceptions too: "cheaper / dearer than usual" signals must
   /// read as good or bad news at a glance.
@@ -39,6 +50,9 @@ class AppRadius {
   static const sm = 12.0;
   static const md = 16.0;
   static const lg = 22.0;
+
+  /// Feuilles et boîtes de dialogue.
+  static const xl = 28.0;
 }
 
 class AppTheme {
@@ -77,12 +91,18 @@ class AppTheme {
         ? AppColors.backgroundDark
         : AppColors.backgroundLight;
     final surface = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final container = isDark
+        ? AppColors.surfaceContainerDark
+        : AppColors.surfaceContainerLight;
     final outline = isDark ? AppColors.outlineDark : AppColors.outlineLight;
     final onSurface = isDark ? Colors.white : AppColors.primary;
+    // Bleu nuit en clair ; en sombre, il disparaîtrait sur le fond, d'où un
+    // bleu plus lumineux pour les boutons pleins.
+    final brand = isDark ? AppColors.primaryLight : AppColors.primary;
 
     final colorScheme = ColorScheme(
       brightness: brightness,
-      primary: isDark ? AppColors.primaryLight : AppColors.primary,
+      primary: brand,
       onPrimary: Colors.white,
       secondary: AppColors.accent,
       onSecondary: Colors.white,
@@ -92,13 +112,14 @@ class AppTheme {
       onSurface: onSurface,
       outline: outline,
       outlineVariant: outline,
+      surfaceContainer: container,
+      surfaceContainerHigh: container,
       surfaceContainerHighest: isDark
           ? const Color(0xFF17323F)
-          : const Color(0xFFEFE7D4),
+          : const Color(0xFFEEF2F4),
     );
 
     final textTheme = _textTheme(brightness);
-    final borderRadius = BorderRadius.circular(AppRadius.md);
 
     return ThemeData(
       useMaterial3: true,
@@ -114,52 +135,61 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: textTheme.titleLarge?.copyWith(color: onSurface),
+        toolbarHeight: 64,
+        titleSpacing: 20,
+        titleTextStyle: textTheme.headlineSmall?.copyWith(
+          color: onSurface,
+          fontSize: 24,
+          letterSpacing: -0.3,
+        ),
         iconTheme: IconThemeData(color: onSurface),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: surface,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: borderRadius,
-          side: BorderSide(color: outline, width: 1.3),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
       ),
-      dividerTheme: DividerThemeData(color: outline, thickness: 1, space: 1),
+      dividerTheme: DividerThemeData(
+        color: onSurface.withValues(alpha: 0.08),
+        thickness: 1,
+        space: 1,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        fillColor: container,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+          horizontal: 18,
+          vertical: 15,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(
           color: onSurface.withValues(alpha: 0.45),
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: BorderSide(color: outline, width: 1.3),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: BorderSide(color: outline, width: 1.3),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderSide: BorderSide(color: onSurface, width: 1.5),
         ),
       ),
+      // Boutons en gélule, comme les commandes posées sur la carte.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.accent,
+          backgroundColor: brand,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          shape: const StadiumBorder(),
           textStyle: textTheme.labelLarge?.copyWith(
             fontSize: 15.5,
             letterSpacing: 0.2,
@@ -169,76 +199,82 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: onSurface,
+          backgroundColor: surface,
           minimumSize: const Size.fromHeight(52),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          side: BorderSide(color: outline, width: 1.4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          side: BorderSide(color: outline, width: 1.2),
+          shape: const StadiumBorder(),
           textStyle: textTheme.labelLarge?.copyWith(fontSize: 15.5),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.accent,
+          foregroundColor: onSurface,
+          shape: const StadiumBorder(),
           textStyle: textTheme.labelLarge,
         ),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: surface,
-        side: BorderSide(color: outline, width: 1.2),
+        backgroundColor: container,
+        side: BorderSide.none,
         labelStyle: textTheme.labelMedium?.copyWith(color: onSurface),
         // Sans ceci, l'avatar d'un Chip garde la couleur d'icône par défaut
         // de Material, pensée pour un fond clair : en thème sombre elle
         // disparaît dans la puce.
         iconTheme: IconThemeData(color: onSurface, size: 18),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
+        shape: const StadiumBorder(),
       ),
       listTileTheme: ListTileThemeData(
         iconColor: onSurface,
         textColor: onSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
-        elevation: 3,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: brand,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        shape: const StadiumBorder(),
         extendedTextStyle: textTheme.labelLarge?.copyWith(color: Colors.white),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.primary,
-        indicatorColor: Colors.white24,
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        height: 64,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final selected = states.contains(WidgetState.selected);
-          return textTheme.labelSmall?.copyWith(
-            color: selected ? Colors.white : Colors.white60,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          );
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          final selected = states.contains(WidgetState.selected);
-          return IconThemeData(color: selected ? Colors.white : Colors.white60);
-        }),
+        showDragHandle: true,
+        dragHandleColor: onSurface.withValues(alpha: 0.2),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.primary,
         contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accent,
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: onSurface),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: onSurface,
+        inactiveTrackColor: onSurface.withValues(alpha: 0.12),
+        thumbColor: onSurface,
+        overlayColor: onSurface.withValues(alpha: 0.08),
+        activeTickMarkColor: Colors.transparent,
+        inactiveTickMarkColor: Colors.transparent,
+        trackHeight: 5,
       ),
     );
   }

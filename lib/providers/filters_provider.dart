@@ -4,11 +4,28 @@ import '../data/models/fuel_type.dart';
 
 final selectedFuelProvider = StateProvider<FuelType>((ref) => FuelType.gazole);
 
-/// What the map is currently showing markers for. Null until the user
-/// picks one — neither is selected by default.
+/// What the map is currently showing markers for. Fuel stations by
+/// default, so the home screen opens straight onto prices and the list of
+/// stations in view; null is kept for "nothing picked".
 enum MapLayer { stations, bornes }
 
-final mapLayerProvider = StateProvider<MapLayer?>((ref) => null);
+final mapLayerProvider = StateProvider<MapLayer?>((ref) => MapLayer.stations);
+
+/// How the home screen's station list is ordered.
+enum StationSort { cheapest, nearest }
+
+/// Cheapest first by default: it's the question the app answers. Nearest
+/// needs the user's position and falls back to cheapest until it's known.
+final stationSortProvider = StateProvider<StationSort>(
+  (ref) => StationSort.cheapest,
+);
+
+/// How the home screen's EV charger list is ordered.
+enum EvSort { fastest, nearest }
+
+/// Most powerful first by default: chargers have no price to rank on.
+/// Nearest falls back to fastest until the user's position is known.
+final evSortProvider = StateProvider<EvSort>((ref) => EvSort.fastest);
 
 /// Sentinel value of [highwayFilterProvider] meaning "any motorway
 /// station", as opposed to a specific highway code (e.g. "A6").

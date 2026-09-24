@@ -21,6 +21,7 @@ import '../../shared/widgets/station_list_tile.dart';
 import '../../shared/widgets/station_sheet.dart';
 import '../../core/config/app_config.dart';
 import 'place_picker_sheet.dart';
+import '../../shared/widgets/ad_slot.dart';
 
 enum _RouteSort { realCost, alongRoute }
 
@@ -152,6 +153,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
     final byCost = [...candidates]
       ..sort((a, b) => a.cost.total.compareTo(b.cost.total));
     final listed = _sort == _RouteSort.realCost ? byCost : candidates;
+    final ads = InFeedAds(listed.length);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Plein sur mon trajet')),
@@ -245,10 +247,11 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               sliver: SliverList.separated(
-                itemCount: listed.length,
+                itemCount: ads.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  final c = listed[index];
+                  if (ads.isAd(index)) return const AdSlot();
+                  final c = listed[ads.itemIndex(index)];
                   return StationListTile(
                     station: c.station,
                     fuel: fuel,

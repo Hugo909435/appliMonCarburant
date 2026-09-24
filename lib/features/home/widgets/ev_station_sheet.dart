@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/directions.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/ev_station.dart';
 import '../../../shared/widgets/brand_badge.dart';
 
 Future<void> showEvStationSheet(BuildContext context, EvStation station) {
   return showModalBottomSheet(
     context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
     builder: (context) => _EvStationSheetContent(station: station),
   );
 }
