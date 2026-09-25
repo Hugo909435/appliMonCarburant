@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+		<array>
+			<string>com.moncarburant.priceAlerts</string>
+		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
@@ -53,6 +57,10 @@
 		<true/>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Mon Carburant utilise votre position pour afficher les stations-service les plus proches de vous et les prix des carburants autour de vous.</string>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>fetch</string>
+		</array>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

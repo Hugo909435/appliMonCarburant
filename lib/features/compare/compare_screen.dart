@@ -76,9 +76,8 @@ class CompareScreen extends ConsumerWidget {
                         'Écart au litre avec la moins chère de la sélection.',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -106,9 +105,8 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.compare_arrows_rounded,
               size: 48,
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.onSurface
+                  .withValues(alpha: 0.3),
             ),
             const SizedBox(height: 12),
             Text(
@@ -471,11 +469,15 @@ class _PriceCell extends StatelessWidget {
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final gap = this.gap;
 
+    // La marge est prise sur la case, pas ajoutée autour : sinon chaque
+    // ligne déborde de 4 px sur l'étiquette du carburant (et chaque colonne
+    // de 6 px sur l'en-tête de sa station), et le décalage s'accumule.
+    const margin = EdgeInsets.symmetric(horizontal: 3, vertical: 2);
     return Container(
-      width: _stationColumnWidth,
-      height: _rowHeight,
+      width: _stationColumnWidth - margin.horizontal,
+      height: _rowHeight - margin.vertical,
       alignment: Alignment.center,
-      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      margin: margin,
       decoration: gap != null && gap.isCheapest
           ? BoxDecoration(
               color: AppColors.good.withValues(alpha: 0.1),

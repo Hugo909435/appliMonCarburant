@@ -33,7 +33,9 @@ Future<void> _pumpLogo(
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: Center(child: BrandLogo(brand: brand, size: size, shape: shape)),
+          body: Center(
+            child: BrandLogo(brand: brand, size: size, shape: shape),
+          ),
         ),
       ),
     ),
@@ -148,12 +150,7 @@ void main() {
       tester,
     ) async {
       final brand = brandForKey('leclerc')!;
-      await _pumpLogo(
-        tester,
-        brand,
-        size: _dot,
-        shape: BrandLogoShape.circle,
-      );
+      await _pumpLogo(tester, brand, size: _dot, shape: BrandLogoShape.circle);
 
       expect(find.byType(Image), findsOneWidget);
       expect(find.text(brand.short), findsNothing);
@@ -168,12 +165,7 @@ void main() {
 
     testWidgets('un logotype illisible cède la place au badge', (tester) async {
       final brand = brandForKey('colruyt')!;
-      await _pumpLogo(
-        tester,
-        brand,
-        size: _dot,
-        shape: BrandLogoShape.circle,
-      );
+      await _pumpLogo(tester, brand, size: _dot, shape: BrandLogoShape.circle);
 
       expect(find.byType(Image), findsNothing);
       expect(find.text(brand.short), findsOneWidget);

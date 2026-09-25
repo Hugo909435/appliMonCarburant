@@ -42,11 +42,11 @@ class StationRepository {
   Future<DateTime?> lastUpdate() async =>
       await _cache.lastUpdate() ?? _fetchedAt;
 
-  Future<bool> isStale() async {
-    final last = await lastUpdate();
-    if (last == null) return true;
-    return DateTime.now().difference(last) > freshFor;
-  }
+  Future<bool> isStale() async => isTooOld(await lastUpdate());
+
+  /// Whether data downloaded at [last] is due for a refresh.
+  static bool isTooOld(DateTime? last) =>
+      last == null || DateTime.now().difference(last) > freshFor;
 
   Future<List<Station>> refresh() async {
     try {

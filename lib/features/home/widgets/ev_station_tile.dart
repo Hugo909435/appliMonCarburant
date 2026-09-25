@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../data/models/ev_station.dart';
 import '../../../shared/widgets/brand_badge.dart';
+import '../../../shared/widgets/see_more_button.dart';
+import '../../../shared/widgets/trip_line.dart';
 
 /// Colour of a charger by its top power: green for slow AC, orange for
 /// fast, pink for high-power DC. Shared by the map markers and the list.
@@ -21,11 +22,16 @@ class EvStationListTile extends StatelessWidget {
     required this.station,
     this.distanceKm,
     required this.onTap,
+    this.onMore,
   });
 
   final EvStation station;
   final double? distanceKm;
   final VoidCallback onTap;
+
+  /// Ouvre la fiche complète, quand [onTap] fait autre chose : ajoute alors
+  /// un lien « Voir plus » sous le détail des points de charge.
+  final VoidCallback? onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -68,18 +74,20 @@ class EvStationListTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      [
+                    if (station.address.isNotEmpty)
+                      Text(
                         station.address,
-                        if (distanceKm != null) formatDistance(distanceKm!),
-                      ].where((s) => s.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: onSurface.withValues(alpha: 0.6),
-                        fontSize: 12.5,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: onSurface.withValues(alpha: 0.6),
+                          fontSize: 12.5,
+                        ),
                       ),
-                    ),
+                    if (distanceKm case final km?) ...[
+                      const SizedBox(height: 3),
+                      TripLine(distanceKm: km),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       [
@@ -98,6 +106,7 @@ class EvStationListTile extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (onMore case final more?) SeeMoreButton(onPressed: more),
                   ],
                 ),
               ),

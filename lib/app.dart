@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/price_alerts_provider.dart';
 import 'providers/stations_provider.dart';
 import 'router/app_router.dart';
 import 'shared/widgets/loading_screen.dart';
@@ -16,13 +17,14 @@ class MonCarburantApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(authBootstrapProvider);
+    ref.watch(priceAlertSyncProvider);
     return MaterialApp.router(
       title: 'Mon Carburant',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      routerConfig: appRouter,
+      routerConfig: ref.watch(routerProvider),
       locale: const Locale('fr'),
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: const [

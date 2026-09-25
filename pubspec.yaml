@@ -89,6 +89,8 @@ dependencies:
 
   # Numéro de version affiché dans l'écran Compte, pour le support.
   package_info_plus: ^8.0.2
+  flutter_local_notifications: ^22.3.1
+  workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:

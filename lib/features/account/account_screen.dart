@@ -9,8 +9,10 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../data/services/auth_service.dart';
+import '../../data/services/notification_service.dart';
 import '../../providers/app_info_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/price_alerts_provider.dart';
 import '../../shared/widgets/settings_group.dart';
 import '../favorites/widgets/google_signin_web_button.dart';
 
@@ -104,9 +106,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               SettingsTile(
                 icon: Icons.directions_car_outlined,
                 title: 'Mon véhicule',
-                subtitle: 'Consommation et taille du plein',
+                subtitle: 'Carburant, consommation et taille du plein',
                 onTap: () => context.push('/vehicule'),
               ),
+              if (NotificationService.isSupported) const _PriceAlertsTile(),
               SettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Confidentialité',
@@ -161,11 +164,102 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       ),
       const SizedBox(height: 20),
       OutlinedButton.icon(
-        onPressed: () => ref.read(authServiceProvider).signOut(),
+        onPressed: _loading ? null : _signOut,
         icon: const Icon(Icons.logout),
         label: const Text('Se déconnecter'),
       ),
+      const SizedBox(height: 4),
+      TextButton(
+        onPressed: _loading ? null : () => _deleteAccount(context),
+        style: TextButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error,
+        ),
+        child: const Text('Supprimer mon compte'),
+      ),
+      if (_loading) ...[
+        const SizedBox(height: 16),
+        const Center(child: CircularProgressIndicator()),
+      ],
+      if (_error != null) ...[
+        const SizedBox(height: 8),
+        Text(
+          _error!,
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+      ],
     ];
+  }
+
+  Future<void> _signOut() async {
+    setState(() => _error = null);
+    try {
+      await ref.read(authServiceProvider).signOut();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'La déconnexion a échoué. Réessayez.');
+      }
+    }
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer votre compte ?'),
+        content: const Text(
+          'Votre compte et les favoris qui y sont synchronisés seront '
+          'définitivement effacés, sur tous vos appareils. Il vous sera '
+          "demandé de confirmer votre identité.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authServiceProvider).deleteAccount();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Compte supprimé.')));
+    } on AccountDeletionCancelled {
+      // L'utilisateur a renoncé en cours de route : rien n'a été effacé.
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(
+          () => _error = e.code == 'requires-recent-login'
+              ? 'Par sécurité, déconnectez-vous puis reconnectez-vous avant '
+                    'de supprimer votre compte.'
+              : 'La suppression a échoué. Vérifiez votre connexion et '
+                    'réessayez.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _error =
+              'La suppression a échoué. Vérifiez votre connexion et '
+              'réessayez.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   List<Widget> _signInContent(BuildContext context) {
@@ -223,6 +317,38 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
         ),
       ],
     ];
+  }
+}
+
+/// Interrupteur des alertes de baisse de prix sur les favoris.
+class _PriceAlertsTile extends ConsumerWidget {
+  const _PriceAlertsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(priceAlertsProvider).valueOrNull ?? false;
+    final notifier = ref.read(priceAlertsProvider.notifier);
+
+    Future<void> toggle(bool on) async {
+      if (!on) return notifier.disable();
+      if (await notifier.enable() || !context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Notifications bloquées : autorisez-les dans les réglages du '
+            'téléphone.',
+          ),
+        ),
+      );
+    }
+
+    return SettingsTile(
+      icon: Icons.notifications_active_outlined,
+      title: 'Alertes de prix',
+      subtitle: '10 cts de moins que d’habitude dans vos favoris',
+      trailing: Switch(value: enabled, onChanged: toggle),
+      onTap: () => toggle(!enabled),
+    );
   }
 }
 

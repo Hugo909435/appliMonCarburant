@@ -5,12 +5,17 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/config/app_config.dart';
 import 'core/crash_reporting.dart';
 import 'core/utils/platform_support.dart';
+import 'data/services/price_alert_service.dart';
+import 'data/services/price_alert_task.dart';
 import 'firebase_options.dart';
+import 'providers/onboarding_provider.dart';
+import 'providers/preferences_provider.dart';
 
 Future<void> main() async {
   // Centralise la capture des erreurs — framework, async et zone — pour
@@ -36,10 +41,14 @@ Future<void> main() async {
           debugPrint('Échec de l\'initialisation Firebase, mode local: $e');
         }
       }
+      final prefs = await SharedPreferences.getInstance();
+      await OnboardingNotifier.skipForExistingInstall(prefs);
+      await _startPriceAlerts();
       runApp(
-        const ProviderScope(
-          observers: [CrashReportingObserver()],
-          child: MonCarburantApp(),
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          observers: const [CrashReportingObserver()],
+          child: const MonCarburantApp(),
         ),
       );
     },
@@ -50,6 +59,20 @@ Future<void> main() async {
       debugPrint('Uncaught async error: $error\n$stack');
     },
   );
+}
+
+/// Android oublie le point d'entrée de la tâche de fond d'un lancement à
+/// l'autre : il faut le redonner à chaque fois, puis reprogrammer la tâche
+/// si l'utilisateur a activé les alertes.
+Future<void> _startPriceAlerts() async {
+  await PriceAlertScheduler.initialize();
+  try {
+    if (await PriceAlertService().isEnabled()) {
+      unawaited(PriceAlertScheduler.enable());
+    }
+  } catch (e) {
+    debugPrint('Lecture du réglage des alertes impossible : $e');
+  }
 }
 
 Future<void> _installCrashReporting() async {

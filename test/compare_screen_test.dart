@@ -77,29 +77,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets("l'écart avec la moins chère est affiché, pas seulement le prix", (
-    tester,
-  ) async {
-    await _pumpCompare(
-      tester,
-      stations: [_station('a', gazole: 1.759), _station('b', gazole: 1.709)],
-      compared: ['a', 'b'],
-    );
+  testWidgets(
+    "l'écart avec la moins chère est affiché, pas seulement le prix",
+    (tester) async {
+      await _pumpCompare(
+        tester,
+        stations: [_station('a', gazole: 1.759), _station('b', gazole: 1.709)],
+        compared: ['a', 'b'],
+      );
 
-    // 1,759 − 1,709 = 0,050 €/L, et la gagnante est nommée comme telle.
-    expect(find.text('+0,050 €'), findsOneWidget);
-    expect(find.text('la moins chère'), findsWidgets);
-  });
+      // 1,759 − 1,709 = 0,050 €/L, et la gagnante est nommée comme telle.
+      expect(find.text('+0,050 €'), findsOneWidget);
+      expect(find.text('la moins chère'), findsWidgets);
+    },
+  );
 
   testWidgets('une station sans le carburant ne passe pas pour la plus chère', (
     tester,
   ) async {
     await _pumpCompare(
       tester,
-      stations: [
-        _station('a', gazole: 1.759),
-        _station('b', sp95: 1.899),
-      ],
+      stations: [_station('a', gazole: 1.759), _station('b', sp95: 1.899)],
       compared: ['a', 'b'],
     );
 
@@ -118,6 +116,40 @@ void main() {
     expect(
       find.textContaining('jusqu\'à $kMaxComparedStations stations'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('chaque case reste en face de son carburant et de sa station', (
+    tester,
+  ) async {
+    // Le SP95 manque chez b et c : leurs cases de la 2e ligne affichent « — ».
+    await _pumpCompare(
+      tester,
+      stations: [
+        _station('a', gazole: 1.759, sp95: 1.899),
+        _station('b', gazole: 1.709),
+        _station('c', gazole: 1.802),
+      ],
+      compared: ['a', 'b', 'c'],
+    );
+
+    final dash = find.text('—').last; // colonne c, ligne SP95
+    // Même hauteur que l'étiquette de la ligne (le premier « SP95 » est
+    // celui du sélecteur de carburant)…
+    expect(
+      tester.getCenter(dash).dy,
+      moreOrLessEquals(
+        tester.getCenter(find.text('SP95').last).dy,
+        epsilon: 0.5,
+      ),
+    );
+    // … et même axe que l'en-tête de la colonne.
+    expect(
+      tester.getCenter(dash).dx,
+      moreOrLessEquals(
+        tester.getCenter(find.text('Ville c').first).dx,
+        epsilon: 0.5,
+      ),
     );
   });
 }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
-import '../../core/utils/formatters.dart';
 import '../../core/utils/price_gaps.dart';
 import '../../data/models/fuel_type.dart';
 import '../../data/models/station.dart';
@@ -11,6 +10,8 @@ import '../../providers/favorites_provider.dart';
 import 'brand_logo.dart';
 import 'price_gap_label.dart';
 import 'price_totem.dart';
+import 'see_more_button.dart';
+import 'trip_line.dart';
 
 class StationListTile extends ConsumerWidget {
   const StationListTile({
@@ -21,6 +22,7 @@ class StationListTile extends ConsumerWidget {
     this.footer,
     this.priceGap,
     required this.onTap,
+    this.onMore,
   });
 
   final Station station;
@@ -35,6 +37,10 @@ class StationListTile extends ConsumerWidget {
   /// Optional extra line under the address (e.g. the real cost of a fill-up).
   final Widget? footer;
   final VoidCallback onTap;
+
+  /// Ouvre la fiche complète, quand [onTap] fait autre chose : ajoute alors
+  /// un lien « Voir plus » sous l'adresse.
+  final VoidCallback? onMore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -83,19 +89,22 @@ class StationListTile extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      [
+                    if (station.adresse.isNotEmpty)
+                      Text(
                         station.adresse,
-                        if (distanceKm != null) formatDistance(distanceKm!),
-                      ].where((s) => s.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: onSurface.withValues(alpha: 0.6),
-                        fontSize: 12.5,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: onSurface.withValues(alpha: 0.6),
+                          fontSize: 12.5,
+                        ),
                       ),
-                    ),
+                    if (distanceKm case final km?) ...[
+                      const SizedBox(height: 3),
+                      TripLine(distanceKm: km),
+                    ],
                     if (footer != null) ...[const SizedBox(height: 4), footer!],
+                    if (onMore case final more?) SeeMoreButton(onPressed: more),
                   ],
                 ),
               ),

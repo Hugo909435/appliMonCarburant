@@ -1,8 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/fuel_type.dart';
+import 'preferences_provider.dart';
+import 'vehicle_provider.dart';
 
-final selectedFuelProvider = StateProvider<FuelType>((ref) => FuelType.gazole);
+/// Fuel the map shows prices for. Opens on the car's fuel (see
+/// [VehicleProfile.fuel]); changing it on the map lasts for the session.
+final selectedFuelProvider = StateProvider<FuelType>(
+  (ref) =>
+      VehicleNotifier.savedFuel(ref.read(sharedPreferencesProvider)) ??
+      VehicleProfile.defaults.fuel,
+);
 
 /// What the map is currently showing markers for. Fuel stations by
 /// default, so the home screen opens straight onto prices and the list of

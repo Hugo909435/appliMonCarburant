@@ -60,6 +60,9 @@ class RoutingService {
     }
     final best = routes.first as Map;
     final coords = (best['geometry'] as Map)['coordinates'] as List;
+    if (coords.isEmpty) {
+      throw const RoutingException('Aucun itinéraire routier trouvé.');
+    }
     return RouteResult(
       points: [
         for (final c in coords)

@@ -47,6 +47,17 @@ class _FakeAuth implements AuthService {
   @override
   Future<void> signOut() async => signOutCalls++;
 
+  int deleteCalls = 0;
+
+  @override
+  Future<void> deleteAccount() async {
+    deleteCalls++;
+    if (failWith != null) throw failWith!;
+  }
+
+  @override
+  Future<void> ensureSession() async {}
+
   @override
   Future<void> bootstrap() async {}
 
@@ -241,6 +252,66 @@ void main() {
     });
   });
 
+  // Règle 5.1.1(v) de l'App Store : un compte créé dans l'app doit pouvoir y
+  // être supprimé.
+  group('suppression du compte', () {
+    testWidgets('rien n’est supprimé sans confirmation', (tester) async {
+      final auth = await _pumpAccount(tester, linkedTo: SignInProvider.apple);
+
+      await tester.tap(find.text('Supprimer mon compte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+
+      expect(auth.deleteCalls, 0);
+    });
+
+    testWidgets('confirmer appelle le service', (tester) async {
+      final auth = await _pumpAccount(tester, linkedTo: SignInProvider.apple);
+
+      await tester.tap(find.text('Supprimer mon compte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+
+      expect(auth.deleteCalls, 1);
+      expect(find.text('Compte supprimé.'), findsOneWidget);
+    });
+
+    testWidgets('renoncer à confirmer son identité n’affiche aucune erreur', (
+      tester,
+    ) async {
+      await _pumpAccount(
+        tester,
+        linkedTo: SignInProvider.apple,
+        failWith: const AccountDeletionCancelled(),
+      );
+
+      await tester.tap(find.text('Supprimer mon compte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('La suppression a échoué'), findsNothing);
+      expect(find.text('Compte supprimé.'), findsNothing);
+    });
+
+    testWidgets('une panne est signalée', (tester) async {
+      await _pumpAccount(
+        tester,
+        linkedTo: SignInProvider.google,
+        failWith: Exception('hors ligne'),
+      );
+
+      await tester.tap(find.text('Supprimer mon compte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('La suppression a échoué'), findsOneWidget);
+    });
+  });
+
   group('accès annexes', () {
     testWidgets('la politique de confidentialité est atteignable', (
       tester,
@@ -256,6 +327,8 @@ void main() {
     testWidgets('la version est affichée, pour le support', (tester) async {
       await _pumpAccount(tester);
       await tester.pump();
+      // Tout en bas de l'écran, sous les réglages.
+      await tester.scrollUntilVisible(find.text('Version 1.0.0 (1)'), 200);
 
       expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
     });

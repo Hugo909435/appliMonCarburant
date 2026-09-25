@@ -51,6 +51,11 @@ const _viewportPadding = 0.3;
 /// never builds more than a couple hundred markers, however far out it is.
 const _thinningMaxZoom = 15.0;
 
+/// Au-delà, même un filtre de zone garde l'écrémage de [_thinOut]. Le plus
+/// gros département compte moins de 300 stations et l'ensemble des
+/// autoroutes un peu plus de 400 : la marge couvre l'un comme l'autre.
+const _maxZoneMarkers = 600;
+
 /// Side, in screen pixels, of the grid cell holding at most one station
 /// while thinning: about a marker's footprint, so the kept markers barely
 /// overlap. Totems are wider than dots, hence the larger cell.
@@ -145,6 +150,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(mapZoomProvider.notifier).state = camera.zoom;
   }
 
+  /// Recadre la carte sur les stations que laisse passer le filtre qui
+  /// vient d'être choisi (un département, une autoroute), au lieu de laisser
+  /// l'utilisateur les chercher sur une carte restée où elle était.
+  void _fitToFilteredStations() {
+    // Appelé depuis l'écoute du filtre, avant que la liste filtrée n'ait vu
+    // le changement : la lire tout de suite rendrait encore toute la France.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fitNow();
+    });
+  }
+
+  void _fitNow() {
+    final points = [
+      for (final s in ref.read(filteredStationsProvider))
+        // Coordonnées absentes du flux : un point au large de l'Afrique
+        // ferait dézoomer sur tout le globe.
+        if (s.lat != 0 || s.lng != 0) ll.LatLng(s.lat, s.lng),
+    ];
+    if (points.isEmpty) return;
+    // Une seule station (ou toutes au même endroit) : pas de zoom infini.
+    _fitVisibleArea(points, maxZoom: 14);
+  }
+
+  /// Centre la carte sur une station touchée dans la liste, assez près pour
+  /// la voir avec son prix et ses voisines, au-dessus de la liste.
+  void _focusOn(double lat, double lng) {
+    _fitVisibleArea(
+      [ll.LatLng(lat, lng)],
+      maxZoom: _thinningMaxZoom,
+      // La liste redescend à mi-hauteur au même moment (voir StationsSheet).
+      sheetFraction: math.min(
+        _sheetExtent.value,
+        StationsSheet.initialFraction,
+      ),
+    );
+  }
+
+  /// Cadre [points] dans la partie de la carte que rien ne recouvre : sous
+  /// la barre de filtres, au-dessus de la liste, à gauche des boutons.
+  ///
+  /// [sheetFraction] : part de l'écran que la liste couvrira. Par défaut, sa
+  /// hauteur actuelle, plafonnée à la moitié : grande ouverte, on cadre pour
+  /// la carte qu'on verra une fois la liste redescendue.
+  void _fitVisibleArea(
+    List<ll.LatLng> points, {
+    required double maxZoom,
+    double? sheetFraction,
+  }) {
+    final size = MediaQuery.sizeOf(context);
+    final topInset = MediaQuery.paddingOf(context).top;
+    final sheetArea = size.height - topInset - _searchRowHeight;
+    final sheetHeight =
+        (sheetFraction ?? math.min(_sheetExtent.value, 0.5)) * sheetArea;
+    _mapController.fitCamera(
+      CameraFit.coordinates(
+        coordinates: points,
+        padding: EdgeInsets.fromLTRB(
+          32,
+          topInset + _searchRowHeight + 16,
+          // Les boutons flottants (favoris, trajet, position) occupent le
+          // bord droit.
+          80,
+          sheetHeight + 24,
+        ),
+        maxZoom: maxZoom,
+      ),
+    );
+  }
+
   Future<void> _locateMe() async {
     await ref.read(userLocationProvider.notifier).requestLocation();
     if (!mounted) return;
@@ -166,6 +240,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Seulement quand un filtre est posé : le retirer laisse la carte où
+    // l'utilisateur l'a amenée.
+    ref.listen(departmentFilterProvider, (previous, dep) {
+      if (dep != null && dep != previous) _fitToFilteredStations();
+    });
+    ref.listen(highwayFilterProvider, (previous, highway) {
+      if (highway != null && highway != previous) _fitToFilteredStations();
+    });
     final layer = ref.watch(mapLayerProvider);
     final search = ref.watch(mapSearchProvider);
     final position = ref.watch(userLocationProvider).valueOrNull;
@@ -259,6 +341,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     StationsSheet(
                       availableHeight: constraints.maxHeight,
+                      onFocus: _focusOn,
                       extent: _sheetExtent,
                       ev: layer == MapLayer.bornes,
                     ),
@@ -512,6 +595,11 @@ class _StationMarkersLayer extends ConsumerWidget {
         const <String, FuelBrand>{};
     final bounds = ref.watch(mapBoundsProvider);
     final zoom = ref.watch(mapZoomProvider);
+    // Un département ou une autoroute choisi : l'utilisateur veut voir toutes
+    // les stations de cette zone, pas seulement la moins chère de chaque case.
+    final zoneFiltered =
+        ref.watch(departmentFilterProvider) != null ||
+        ref.watch(highwayFilterProvider) != null;
 
     // No viewport yet (map not laid out): building markers for the whole
     // national dataset here is what used to stall the first load.
@@ -555,24 +643,24 @@ class _StationMarkersLayer extends ConsumerWidget {
             ),
     );
 
-    // Zoomed out: show only the cheapest station of each screen cell, and
-    // let more appear as the user zooms in and the cells shrink on the map.
-    if (zoom < _thinningMaxZoom) {
-      final kept = _thinOut(
-        stations,
-        zoom: zoom,
-        cellPx: showDetail ? _totemCellPx : _dotCellPx,
-        fuelCode: fuel.code,
-        favoriteIds: favoriteIds,
+    final shown = markerStations(
+      stations,
+      zoom: zoom,
+      zoneFiltered: zoneFiltered,
+      fuelCode: fuel.code,
+      favoriteIds: favoriteIds,
+    );
+    if (shown.mode == MarkerMode.plain) {
+      return MarkerLayer(
+        markers: [for (final s in shown.stations) markerFor(s)],
       );
-      return MarkerLayer(markers: [for (final s in kept) markerFor(s)]);
     }
 
     return MarkerClusterLayerWidget(
       options: MarkerClusterLayerOptions(
         maxClusterRadius: 60,
         size: const Size(40, 40),
-        markers: [for (final station in stations) markerFor(station)],
+        markers: [for (final station in shown.stations) markerFor(station)],
         builder: (context, markers) => CircleAvatar(
           backgroundColor: AppColors.primary,
           child: Text(
@@ -586,6 +674,56 @@ class _StationMarkersLayer extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Comment [markerStations] dessine les stations qu'il retient.
+enum MarkerMode {
+  /// Chaque station à sa place, sans regroupement.
+  plain,
+
+  /// Regroupées en bulles numérotées là où elles se chevauchent.
+  clustered,
+}
+
+/// Les stations du viewport à dessiner à [zoom], et comment.
+///
+/// - Vue large, sans filtre de zone : la moins chère de chaque case de
+///   l'écran seulement ; les autres apparaissent en zoomant, à mesure que
+///   les cases rétrécissent sur la carte.
+/// - Département ou autoroute choisi ([zoneFiltered]) : toutes, les moins
+///   chères en dernier pour être dessinées par-dessus.
+/// - Assez zoomé pour les totems, en zone filtrée, ou au-delà de
+///   [_thinningMaxZoom] : toutes, regroupées là où elles se chevauchent.
+@visibleForTesting
+({List<Station> stations, MarkerMode mode}) markerStations(
+  List<Station> stations, {
+  required double zoom,
+  required bool zoneFiltered,
+  required String fuelCode,
+  required Set<String> favoriteIds,
+}) {
+  final showDetail = zoom >= _detailZoomThreshold;
+  final showAll = zoneFiltered && stations.length <= _maxZoneMarkers;
+  if (showAll && !showDetail) {
+    double price(Station s) => s.prices[fuelCode] ?? double.infinity;
+    return (
+      stations: [...stations]..sort((a, b) => price(b).compareTo(price(a))),
+      mode: MarkerMode.plain,
+    );
+  }
+  if (!showAll && zoom < _thinningMaxZoom) {
+    return (
+      stations: _thinOut(
+        stations,
+        zoom: zoom,
+        cellPx: showDetail ? _totemCellPx : _dotCellPx,
+        fuelCode: fuelCode,
+        favoriteIds: favoriteIds,
+      ),
+      mode: MarkerMode.plain,
+    );
+  }
+  return (stations: stations, mode: MarkerMode.clustered);
 }
 
 /// Keeps at most one station per [cellPx]-wide square of the screen at

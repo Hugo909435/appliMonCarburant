@@ -31,8 +31,12 @@ class StationsSheet extends StatefulWidget {
     super.key,
     required this.availableHeight,
     required this.extent,
+    required this.onFocus,
     this.ev = false,
   });
+
+  /// Centre la carte sur une station ou une borne touchée dans la liste.
+  final void Function(double lat, double lng) onFocus;
 
   /// Lists the EV chargers in view instead of the fuel stations.
   final bool ev;
@@ -70,6 +74,20 @@ class _StationsSheetState extends State<StationsSheet> {
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  /// Toucher une ligne montre l'endroit sur la carte : la liste redescend
+  /// d'abord à mi-hauteur si elle la recouvrait presque entièrement.
+  void _focus(double lat, double lng) {
+    if (_controller.isAttached &&
+        _controller.size > StationsSheet.initialFraction + 0.05) {
+      _controller.animateTo(
+        StationsSheet.initialFraction,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    widget.onFocus(lat, lng);
   }
 
   @override
@@ -118,10 +136,12 @@ class _StationsSheetState extends State<StationsSheet> {
                   ? _EvSheetContent(
                       scrollController: scrollController,
                       onHeaderTap: _toggle,
+                      onFocus: _focus,
                     )
                   : _SheetContent(
                       scrollController: scrollController,
                       onHeaderTap: _toggle,
+                      onFocus: _focus,
                     ),
             ),
           ),
@@ -147,10 +167,12 @@ class _SheetContent extends ConsumerWidget {
   const _SheetContent({
     required this.scrollController,
     required this.onHeaderTap,
+    required this.onFocus,
   });
 
   final ScrollController scrollController;
   final VoidCallback onHeaderTap;
+  final void Function(double lat, double lng) onFocus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -205,7 +227,8 @@ class _SheetContent extends ConsumerWidget {
                   fuel: fuel,
                   distanceKm: listed.distanceKm,
                   priceGap: PriceGap(price: price, perLiter: price - cheapest!),
-                  onTap: () => showStationSheet(context, listed.station),
+                  onTap: () => onFocus(listed.station.lat, listed.station.lng),
+                  onMore: () => showStationSheet(context, listed.station),
                 );
               },
             ),
@@ -221,10 +244,12 @@ class _EvSheetContent extends ConsumerWidget {
   const _EvSheetContent({
     required this.scrollController,
     required this.onHeaderTap,
+    required this.onFocus,
   });
 
   final ScrollController scrollController;
   final VoidCallback onHeaderTap;
+  final void Function(double lat, double lng) onFocus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -274,7 +299,8 @@ class _EvSheetContent extends ConsumerWidget {
                 return EvStationListTile(
                   station: listed.station,
                   distanceKm: listed.distanceKm,
-                  onTap: () => showEvStationSheet(context, listed.station),
+                  onTap: () => onFocus(listed.station.lat, listed.station.lng),
+                  onMore: () => showEvStationSheet(context, listed.station),
                 );
               },
             ),

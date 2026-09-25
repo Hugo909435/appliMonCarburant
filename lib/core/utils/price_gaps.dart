@@ -40,9 +40,6 @@ Map<String, PriceGap> priceGaps(Map<String, double?> pricesByStation) {
   final cheapest = available.values.reduce(min);
   return {
     for (final entry in available.entries)
-      entry.key: PriceGap(
-        price: entry.value,
-        perLiter: entry.value - cheapest,
-      ),
+      entry.key: PriceGap(price: entry.value, perLiter: entry.value - cheapest),
   };
 }

@@ -99,9 +99,9 @@ const _sections = [
   _Section(
     'Vos droits',
     "Vous pouvez à tout moment vous déconnecter, révoquer l’accès à la "
-        'position dans les réglages du système, ou demander la suppression de '
-        'votre compte et de ses favoris en écrivant à '
-        'contact@mon-carburant.com. La suppression est effective sous 30 '
-        'jours.',
+        'position dans les réglages du système, ou supprimer votre compte et '
+        'ses favoris depuis l’écran Compte (« Supprimer mon compte ») : la '
+        'suppression est immédiate. Pour toute autre demande, écrivez à '
+        'contact@mon-carburant.com.',
   ),
 ];

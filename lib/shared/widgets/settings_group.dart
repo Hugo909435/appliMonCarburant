@@ -42,19 +42,21 @@ class SettingsGroup extends StatelessWidget {
 }
 
 /// Une ligne de [SettingsGroup] : icône dans une pastille, titre, sous-titre
-/// et chevron.
+/// et chevron (ou [trailing], un interrupteur par exemple).
 class SettingsTile extends StatelessWidget {
   const SettingsTile({
     super.key,
     required this.icon,
     required this.title,
     this.subtitle,
+    this.trailing,
     this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
+  final Widget? trailing;
   final VoidCallback? onTap;
 
   @override
@@ -74,10 +76,12 @@ class SettingsTile extends StatelessWidget {
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: subtitle == null ? null : Text(subtitle!),
-      trailing: Icon(
-        Icons.chevron_right_rounded,
-        color: scheme.onSurface.withValues(alpha: 0.4),
-      ),
+      trailing:
+          trailing ??
+          Icon(
+            Icons.chevron_right_rounded,
+            color: scheme.onSurface.withValues(alpha: 0.4),
+          ),
       onTap: onTap,
     );
   }

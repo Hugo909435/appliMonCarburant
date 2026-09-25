@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/fill_cost.dart';
 import '../../core/utils/formatters.dart';
 import '../../providers/vehicle_provider.dart';
+import 'widgets/vehicle_form.dart';
 
 class VehicleScreen extends ConsumerWidget {
   const VehicleScreen({super.key});
@@ -11,7 +12,6 @@ class VehicleScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(vehicleProfileProvider);
-    final notifier = ref.read(vehicleProvider.notifier);
     final theme = Theme.of(context);
     // Worked example so the user sees what the numbers change.
     final example = computeFillCost(
@@ -27,41 +27,13 @@ class VehicleScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           Text(
-            "Ces réglages servent à calculer le coût réel d'un plein, trajet "
-            "jusqu'à la station compris.",
+            'Ces réglages choisissent le carburant affiché sur la carte et '
+            "servent à calculer le coût réel d'un plein, trajet jusqu'à la "
+            'station compris.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-              child: Column(
-                children: [
-                  _SliderSetting(
-                    label: 'Consommation',
-                    valueLabel: '${_fmt(profile.consumptionL100)} L/100 km',
-                    value: profile.consumptionL100,
-                    min: 3,
-                    max: 15,
-                    divisions: 24,
-                    onChanged: (v) =>
-                        notifier.save(profile.copyWith(consumptionL100: v)),
-                  ),
-                  const SizedBox(height: 16),
-                  _SliderSetting(
-                    label: 'Quantité habituelle à chaque plein',
-                    valueLabel: '${profile.fillLiters.round()} L',
-                    value: profile.fillLiters,
-                    min: 10,
-                    max: 90,
-                    divisions: 16,
-                    onChanged: (v) =>
-                        notifier.save(profile.copyWith(fillLiters: v)),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const VehicleForm(),
           const SizedBox(height: 12),
           Card(
             color: theme.colorScheme.surfaceContainer,
@@ -77,55 +49,6 @@ class VehicleScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  static String _fmt(double v) => v.toStringAsFixed(1).replaceFirst('.', ',');
-}
-
-class _SliderSetting extends StatelessWidget {
-  const _SliderSetting({
-    required this.label,
-    required this.valueLabel,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String valueLabel;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.titleSmall),
-            ),
-            Text(
-              valueLabel,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-        Slider(
-          value: value.clamp(min, max),
-          min: min,
-          max: max,
-          divisions: divisions,
-          onChanged: onChanged,
-        ),
-      ],
     );
   }
 }

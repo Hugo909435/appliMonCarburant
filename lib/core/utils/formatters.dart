@@ -13,10 +13,19 @@ String formatPriceGap(double delta) {
   return '$sign${delta.abs().toStringAsFixed(3).replaceFirst('.', ',')} €';
 }
 
-
 String formatDistance(double km) {
   if (km < 1) return '${(km * 1000).round()} m';
   return '${km.toStringAsFixed(1).replaceFirst('.', ',')} km';
+}
+
+/// Temps de trajet estimé : « 1 min », « 12 min », « 1 h 05 ». Arrondi à la
+/// minute supérieure, et jamais « 0 min » pour une station à deux pas.
+String formatDriveTime(Duration duration) {
+  final totalMinutes = (duration.inSeconds / 60).ceil().clamp(1, 1 << 30);
+  final hours = totalMinutes ~/ 60;
+  final minutes = totalMinutes % 60;
+  if (hours == 0) return '$minutes min';
+  return '$hours h ${minutes.toString().padLeft(2, '0')}';
 }
 
 String formatRelativeDate(DateTime? date) {

@@ -37,7 +37,10 @@ void main() {
     IconData icon,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(theme: theme, home: Scaffold(body: Center(child: child))),
+      MaterialApp(
+        theme: theme,
+        home: Scaffold(body: Center(child: child)),
+      ),
     );
     final color = IconTheme.of(tester.element(find.byIcon(icon))).color;
     expect(color, isNotNull, reason: 'aucune couleur héritée');

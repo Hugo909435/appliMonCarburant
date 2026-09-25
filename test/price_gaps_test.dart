@@ -16,14 +16,17 @@ void main() {
       expect(gaps['c']!.perLiter, closeTo(0.093, 1e-9));
     });
 
-    test("une station qui ne propose pas le carburant sort de la comparaison", () {
-      // Elle n'est pas « plus chère » : elle n'a pas de prix du tout, et la
-      // compter comme dernière tromperait sur le classement.
-      final gaps = priceGaps({'a': 1.759, 'b': null});
+    test(
+      "une station qui ne propose pas le carburant sort de la comparaison",
+      () {
+        // Elle n'est pas « plus chère » : elle n'a pas de prix du tout, et la
+        // compter comme dernière tromperait sur le classement.
+        final gaps = priceGaps({'a': 1.759, 'b': null});
 
-      expect(gaps.keys, ['a']);
-      expect(gaps['a']!.isCheapest, isTrue);
-    });
+        expect(gaps.keys, ['a']);
+        expect(gaps['a']!.isCheapest, isTrue);
+      },
+    );
 
     test('sans aucun prix, il n y a rien à comparer', () {
       expect(priceGaps({'a': null, 'b': null}), isEmpty);

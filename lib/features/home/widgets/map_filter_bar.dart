@@ -280,8 +280,12 @@ class _BrandChip extends ConsumerWidget {
   /// their on-screen count) and the others (with their nationwide count),
   /// each most common first. Off-screen brands stay pickable: the user
   /// just has to zoom out to see them.
+  ///
+  /// Only brands with a logo in `assets/logos/` are offered: the others
+  /// (small independents, one-off names from OpenStreetMap) made a long,
+  /// noisy list of initials.
   ({List<(FuelBrand, int)> visible, List<(FuelBrand, int)> elsewhere})
-  _brandsByVisibility(WidgetRef ref) {
+  _brandsByVisibility(WidgetRef ref, Set<String> logoAssets) {
     final brands =
         ref.read(stationBrandsProvider).valueOrNull ??
         const <String, FuelBrand>{};
@@ -290,7 +294,9 @@ class _BrandChip extends ConsumerWidget {
     final total = <FuelBrand, int>{};
     for (final s in ref.read(filteredStationsProvider)) {
       final b = brands[s.id];
-      if (b == null) continue;
+      if (b == null || !logoAssets.contains('assets/logos/${b.key}.png')) {
+        continue;
+      }
       total[b] = (total[b] ?? 0) + 1;
       if (bounds == null ||
           (s.lat >= bounds.south &&
@@ -311,8 +317,15 @@ class _BrandChip extends ConsumerWidget {
     );
   }
 
-  void _pickBrand(BuildContext context, WidgetRef ref) {
-    final (:visible, :elsewhere) = _brandsByVisibility(ref);
+  Future<void> _pickBrand(BuildContext context, WidgetRef ref) async {
+    final Set<String> logoAssets;
+    try {
+      logoAssets = await ref.read(brandLogoAssetsProvider.future);
+    } catch (_) {
+      return;
+    }
+    if (!context.mounted) return;
+    final (:visible, :elsewhere) = _brandsByVisibility(ref, logoAssets);
     final selected = ref.read(selectedBrandProvider);
     final muted = TextStyle(
       fontSize: 12,

@@ -51,6 +51,10 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
   RouteResult? _route;
   List<StationOnRoute> _stationsOnRoute = const [];
 
+  /// Numéro du dernier calcul lancé : une réponse lente d'un calcul
+  /// précédent ne doit pas écraser l'itinéraire demandé ensuite.
+  int _request = 0;
+
   Future<void> _pick({required bool from}) async {
     final place = await showPlacePicker(
       context,
@@ -86,6 +90,8 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
   Future<void> _compute() async {
     final to = _to;
     if (to == null) return;
+    final request = ++_request;
+    bool superseded() => !mounted || request != _request;
     setState(() {
       _loading = true;
       _error = null;
@@ -100,14 +106,14 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
         );
       }
       final route = await ref.read(routingServiceProvider).route(a, b);
-      if (!mounted) return;
+      if (superseded()) return;
       setState(() {
         _route = route;
         _loading = false;
       });
       _refilter();
     } catch (e) {
-      if (!mounted) return;
+      if (superseded()) return;
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -377,6 +383,7 @@ class _RouteMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final points = [for (final p in route.points) ll.LatLng(p.lat, p.lng)];
+    final singlePoint = points.every((p) => p == points.first);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: ClipRRect(
@@ -388,10 +395,21 @@ class _RouteMap extends StatelessWidget {
             // applies on first build.
             key: ValueKey(route),
             options: MapOptions(
-              initialCameraFit: CameraFit.bounds(
-                bounds: LatLngBounds.fromPoints(points),
-                padding: const EdgeInsets.all(28),
-              ),
+              // Départ et arrivée confondus : OSRM renvoie deux fois le même
+              // point, des bornes de taille nulle, et un cadrage à zoom infini
+              // qui fait planter les tuiles. On centre alors simplement.
+              initialCenter: singlePoint
+                  ? points.first
+                  : const MapOptions().initialCenter,
+              initialZoom: singlePoint ? 15 : const MapOptions().initialZoom,
+              initialCameraFit: singlePoint
+                  ? null
+                  : CameraFit.bounds(
+                      bounds: LatLngBounds.fromPoints(points),
+                      padding: const EdgeInsets.all(28),
+                      // Garde-fou pour un trajet de quelques mètres.
+                      maxZoom: 17,
+                    ),
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
               ),

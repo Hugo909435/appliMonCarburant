@@ -9,6 +9,7 @@ import '../data/models/station.dart';
 import '../data/repositories/station_repository.dart';
 import '../data/services/departments_data.dart';
 import '../data/services/price_history_service.dart';
+import 'price_alerts_provider.dart';
 import 'stats_provider.dart';
 
 final stationRepositoryProvider = Provider<StationRepository>(
@@ -62,18 +63,29 @@ class StationsNotifier extends AsyncNotifier<List<Station>> {
   bool _online = true;
   bool _lastFailed = false;
 
+  /// Date of the prices currently shown. The background price check
+  /// (price_alert_task.dart) can write newer ones to disk while the app
+  /// runs, in the same process on Android: comparing against the on-disk
+  /// date tells when to pick them up.
+  DateTime? _shownDate;
+
   @override
   Future<List<Station>> build() async {
     _keepFresh();
 
     final repo = ref.read(stationRepositoryProvider);
-    final cached = await repo.loadFromCache();
+    // Date first, data second — the reverse of the order the cache writes
+    // them in. A write landing in between then pairs fresher prices with the
+    // older date (at worst one extra download), never old prices with a
+    // fresh date that would hold off the refresh.
     final lastUpdate = await repo.lastUpdate();
+    final cached = await repo.loadFromCache();
+    _shownDate = lastUpdate;
     ref.read(lastUpdateProvider.notifier).state = lastUpdate;
 
     if (cached.isNotEmpty) {
       // Show cached data immediately, refresh quietly in the background if stale.
-      if (_online && await repo.isStale()) {
+      if (_online && StationRepository.isTooOld(lastUpdate)) {
         unawaited(refresh());
       }
       return cached;
@@ -122,10 +134,29 @@ class StationsNotifier extends AsyncNotifier<List<Station>> {
   }
 
   Future<void> _refreshIfStale() async {
+    await _reloadIfNewerOnDisk();
     if (!_online) return;
-    if (await ref.read(stationRepositoryProvider).isStale()) {
+    if (StationRepository.isTooOld(_shownDate)) {
       await refresh();
     }
+  }
+
+  /// Picks up prices the background task saved since they were loaded.
+  /// Without this, the fresh date on disk would hold off the refresh while
+  /// the screen kept showing the older prices still in memory.
+  Future<void> _reloadIfNewerOnDisk() async {
+    if (_inFlight != null) return;
+    final repo = ref.read(stationRepositoryProvider);
+    // Same order as build(): date first, then data.
+    final onDisk = await repo.lastUpdate();
+    final shown = _shownDate;
+    if (onDisk == null || (shown != null && !onDisk.isAfter(shown))) return;
+    final stations = await repo.loadFromCache();
+    // A download started meanwhile will publish its own, fresher result.
+    if (stations.isEmpty || _inFlight != null) return;
+    _shownDate = onDisk;
+    ref.read(lastUpdateProvider.notifier).state = onDisk;
+    state = AsyncData(stations);
   }
 
   Future<List<Station>> refresh() {
@@ -156,9 +187,11 @@ class StationsNotifier extends AsyncNotifier<List<Station>> {
     try {
       final stations = await repo.refresh();
       _lastFailed = false;
-      ref.read(lastUpdateProvider.notifier).state = await repo.lastUpdate();
+      _shownDate = await repo.lastUpdate();
+      ref.read(lastUpdateProvider.notifier).state = _shownDate;
       state = AsyncData(stations);
       await _recordHistory(stations);
+      unawaited(_checkPriceAlerts(stations));
       return stations;
     } catch (err, stack) {
       _lastFailed = true;
@@ -173,6 +206,16 @@ class StationsNotifier extends AsyncNotifier<List<Station>> {
       }
       state = AsyncError(err, stack);
       return const [];
+    }
+  }
+
+  /// Même contrôle que la tâche de fond : app ouverte, c'est ce
+  /// téléchargement-ci qui révèle une baisse sur un favori.
+  Future<void> _checkPriceAlerts(List<Station> stations) async {
+    try {
+      await ref.read(priceAlertServiceProvider).check(stations);
+    } catch (_) {
+      // Une alerte manquée ne doit pas faire échouer la mise à jour.
     }
   }
 
