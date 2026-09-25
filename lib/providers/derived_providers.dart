@@ -98,31 +98,19 @@ final viewportStationsProvider = Provider<List<ListedStation>>((ref) {
   return listed;
 });
 
-/// EV chargers after every filter (plug type, network, fast-charge-only,
-/// free-only). Shared by the map markers layer and the list view.
+/// EV chargers after every filter (connector, operator, power, free-only).
+/// Shared by the map markers layer and the list view. The API already
+/// filtered them; this hides, as soon as a filter changes, the chargers
+/// fetched before it while the new ones load.
 final filteredEvStationsProvider = Provider<List<EvStation>>((ref) {
-  var evStations =
+  final evStations =
       ref.watch(evStationsProvider).valueOrNull ?? const <EvStation>[];
-  final plugType = ref.watch(plugTypeFilterProvider);
-  final network = ref.watch(evNetworkFilterProvider);
-  final fastChargeOnly = ref.watch(fastChargeOnlyProvider);
-  final freeOnly = ref.watch(evFreeOnlyProvider);
-
-  if (plugType != null) {
-    evStations = evStations
-        .where((e) => e.plugTypes.contains(plugType))
-        .toList();
-  }
-  if (network != null) {
-    evStations = evStations.where((e) => e.network == network).toList();
-  }
-  if (fastChargeOnly) {
-    evStations = evStations.where((e) => e.maxPowerKw >= 50).toList();
-  }
-  if (freeOnly) {
-    evStations = evStations.where((e) => e.free).toList();
-  }
-  return evStations;
+  final filter = ref.watch(evFilterProvider);
+  if (filter.isEmpty) return evStations;
+  return [
+    for (final e in evStations)
+      if (filter.accepts(e)) e,
+  ];
 });
 
 /// An EV charger of the home list, with its distance to the user when known.

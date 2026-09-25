@@ -117,9 +117,6 @@ void main() {
       maxPowerKw: kw,
       plugTypes: const [],
       free: false,
-      accessCondition: '',
-      hours: '',
-      pmrAccessible: false,
     );
 
     test('en vue large, la plus puissante de chaque case seulement', () {

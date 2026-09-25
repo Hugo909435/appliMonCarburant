@@ -28,11 +28,8 @@ class StationRepository {
   /// covers that check interval plus the download itself.
   static const freshFor = Duration(hours: 1, minutes: 50);
 
-  Future<List<Station>> loadFromCache() async {
-    final raw = await _cache.read();
-    if (raw == null) return [];
-    return raw.map(Station.fromJson).toList();
-  }
+  Future<List<Station>> loadFromCache() async =>
+      await _cache.readAs(Station.fromJson) ?? [];
 
   /// Last successful download in this session. Backs up the on-disk date
   /// where the cache can't be written (web): without it the data would

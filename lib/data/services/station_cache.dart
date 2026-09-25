@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:path_provider/path_provider.dart';
@@ -31,13 +32,22 @@ class StationCache {
     return File('${dir.path}/$_metaFileName');
   }
 
-  Future<List<Map<String, dynamic>>?> read() async {
+  Future<List<Map<String, dynamic>>?> read() => readAs(_identity);
+
+  static Map<String, dynamic> _identity(Map<String, dynamic> json) => json;
+
+  /// The cached stations, each turned into a [T] by [convert]. The file
+  /// weighs several MB: it is read, decoded and converted in another
+  /// isolate, which would otherwise freeze the UI for seconds at launch.
+  Future<List<T>?> readAs<T>(T Function(Map<String, dynamic>) convert) async {
     try {
       final file = await _cacheFile();
       if (!await file.exists()) return null;
-      final text = await file.readAsString();
-      final list = jsonDecode(text) as List;
-      return list.cast<Map<String, dynamic>>();
+      final path = file.path;
+      return await Isolate.run(() {
+        final list = jsonDecode(File(path).readAsStringSync()) as List;
+        return [for (final json in list) convert(json as Map<String, dynamic>)];
+      });
     } catch (_) {
       return null;
     }
@@ -52,7 +62,9 @@ class StationCache {
       // StationsNotifier): one caught in between sees fresh prices with the
       // previous date, which at worst triggers one extra download — never
       // stale prices passed off as fresh.
-      await _writeAtomically(await _cacheFile(), jsonEncode(stations));
+      // Encodé hors du thread de l'interface : plusieurs Mo de JSON.
+      final text = await Isolate.run(() => jsonEncode(stations));
+      await _writeAtomically(await _cacheFile(), text);
       await _writeAtomically(
         await _metaFile(),
         jsonEncode({'lastUpdate': DateTime.now().toIso8601String()}),

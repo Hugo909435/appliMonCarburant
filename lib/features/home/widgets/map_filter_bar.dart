@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/brands/brand_catalog.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/fuel_colors.dart';
+import '../../../data/models/ev_station.dart';
 import '../../../data/models/fuel_type.dart';
 import '../../../providers/derived_providers.dart';
 import '../../../providers/ev_stations_provider.dart';
@@ -13,6 +14,7 @@ import '../../../providers/map_viewport_provider.dart';
 import '../../../providers/station_brands_provider.dart';
 import '../../../providers/stations_provider.dart';
 import '../../../shared/widgets/brand_logo.dart';
+import '../../../shared/widgets/loading_bar.dart';
 
 /// Each filter's icon gets its own fixed color so it reads as a small
 /// "logo" at a glance — the chips themselves stay white/navy.
@@ -25,9 +27,8 @@ class _FilterColors {
   static const favoris = Color(0xFFFFB300);
   static const service = Color(0xFF6D4C41);
   static const plugType = Color(0xFF1E6FA8);
-  static const fastCharge = Color(0xFFFFA000);
-  static const evFree = Color(0xFF43A047);
-  static const evNetwork = Color(0xFF8E24AA);
+  static const power = Color(0xFFFFA000);
+  static const evOperator = Color(0xFF8E24AA);
 }
 
 /// The horizontal filter row floating over the map, under the search: fuel stations
@@ -98,6 +99,7 @@ class MapFilterBar extends ConsumerWidget {
                   selected: layer == MapLayer.bornes,
                   tooltip: 'Bornes électriques',
                   tintIcon: true,
+                  fillWithColor: true,
                   onTap: () => ref.read(mapLayerProvider.notifier).state =
                       MapLayer.bornes,
                 ),
@@ -120,11 +122,9 @@ class MapFilterBar extends ConsumerWidget {
                 const SizedBox(width: 14),
                 const _PlugTypeChip(),
                 const SizedBox(width: 8),
-                const _EvNetworkChip(),
+                const _EvOperatorChip(),
                 const SizedBox(width: 8),
-                const _FastChargeChip(),
-                const SizedBox(width: 8),
-                const _EvFreeChip(),
+                const _EvPowerChip(),
               ],
             ],
           ),
@@ -157,6 +157,7 @@ class _LogoBadge extends StatelessWidget {
     required this.onTap,
     required this.tooltip,
     this.tintIcon = false,
+    this.fillWithColor = false,
   });
 
   final IconData icon;
@@ -168,6 +169,10 @@ class _LogoBadge extends StatelessWidget {
   /// When true, the icon itself is always tinted with [color] (like the
   /// other filters' logos), instead of staying black until selected.
   final bool tintIcon;
+
+  /// When true, the badge fills with [color] once selected, instead of the
+  /// app's navy.
+  final bool fillWithColor;
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +186,9 @@ class _LogoBadge extends StatelessWidget {
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.white,
+            color: selected
+                ? (fillWithColor ? color : AppColors.primary)
+                : Colors.white,
             shape: BoxShape.circle,
             boxShadow: _chipShadow,
           ),
@@ -702,10 +709,6 @@ class _DepartmentPickerSheetState
   }
 }
 
-/// The known plug types the IRVE feed distinguishes — fixed, unlike brands
-/// or networks, so no need to derive them from the loaded data.
-const _plugTypes = ['Type 2', 'Combo CCS', 'CHAdeMO', 'Type EF'];
-
 class _PlugTypeChip extends ConsumerWidget {
   const _PlugTypeChip();
 
@@ -716,7 +719,7 @@ class _PlugTypeChip extends ConsumerWidget {
       selected: plugType != null,
       icon: Icons.power_rounded,
       iconColor: _FilterColors.plugType,
-      label: plugType ?? 'Prise',
+      label: plugType ?? 'Connecteur',
       trailing: plugType != null
           ? GestureDetector(
               onTap: () =>
@@ -731,153 +734,252 @@ class _PlugTypeChip extends ConsumerWidget {
   void _pickPlugType(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Type de prise',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final type in _plugTypes)
-                    ChoiceChip(
-                      label: Text(type),
-                      selected: type == ref.read(plugTypeFilterProvider),
-                      onSelected: (_) {
-                        ref.read(plugTypeFilterProvider.notifier).state = type;
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _ChoiceSheet(
+        title: 'Connecteur',
+        children: [
+          for (final type in evPlugFields.keys)
+            ChoiceChip(
+              label: Text(type),
+              selected: type == ref.read(plugTypeFilterProvider),
+              onSelected: (_) {
+                ref.read(plugTypeFilterProvider.notifier).state = type;
+                Navigator.of(context).pop();
+              },
+            ),
+        ],
       ),
     );
   }
 }
 
-class _EvNetworkChip extends ConsumerWidget {
-  const _EvNetworkChip();
+class _EvPowerChip extends ConsumerWidget {
+  const _EvPowerChip();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final network = ref.watch(evNetworkFilterProvider);
+    final minPower = ref.watch(evMinPowerProvider);
     return _Pill(
-      selected: network != null,
-      icon: Icons.apartment_rounded,
-      iconColor: _FilterColors.evNetwork,
-      label: network ?? 'Réseau',
-      trailing: network != null
+      selected: minPower != null,
+      icon: Icons.bolt_rounded,
+      iconColor: _FilterColors.power,
+      label: minPower == null ? 'Puissance' : '$minPower kW et +',
+      trailing: minPower != null
           ? GestureDetector(
-              onTap: () =>
-                  ref.read(evNetworkFilterProvider.notifier).state = null,
+              onTap: () => ref.read(evMinPowerProvider.notifier).state = null,
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
-      onTap: () => _pickNetwork(context, ref),
+      onTap: () => _pickPower(context, ref),
     );
   }
 
-  void _pickNetwork(BuildContext context, WidgetRef ref) {
-    final evStations = ref.read(evStationsProvider).valueOrNull ?? const [];
-    final networks =
-        evStations
-            .map((e) => e.network)
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-
+  void _pickPower(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Réseau visible ici',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'D\'après les bornes affichées sur la zone.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface
-                      .withValues(alpha: 0.55),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (networks.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Aucun réseau trouvé sur cette zone.'),
-                )
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final n in networks)
-                      ChoiceChip(
-                        label: Text(n),
-                        selected: n == ref.read(evNetworkFilterProvider),
-                        onSelected: (_) {
-                          ref.read(evNetworkFilterProvider.notifier).state = n;
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                  ],
-                ),
-            ],
-          ),
+      builder: (context) => _ChoiceSheet(
+        title: 'Puissance minimale',
+        children: [
+          for (final kw in evPowerSteps)
+            ChoiceChip(
+              label: Text('$kw kW'),
+              selected: kw == ref.read(evMinPowerProvider),
+              onSelected: (_) {
+                ref.read(evMinPowerProvider.notifier).state = kw;
+                Navigator.of(context).pop();
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A bottom sheet of choice chips under a title.
+class _ChoiceSheet extends StatelessWidget {
+  const _ChoiceSheet({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: children),
+          ],
         ),
       ),
     );
   }
 }
 
-class _FastChargeChip extends ConsumerWidget {
-  const _FastChargeChip();
+class _EvOperatorChip extends ConsumerWidget {
+  const _EvOperatorChip();
+
+  /// Longest operator name shown whole in the chip.
+  static const _maxLabel = 22;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final active = ref.watch(fastChargeOnlyProvider);
+    final selected = ref.watch(evOperatorFilterProvider);
+    final name = selected?.name;
     return _Pill(
-      selected: active,
-      icon: Icons.bolt_rounded,
-      iconColor: _FilterColors.fastCharge,
-      label: 'Charge rapide',
-      onTap: () => ref.read(fastChargeOnlyProvider.notifier).state = !active,
+      selected: selected != null,
+      icon: Icons.apartment_rounded,
+      iconColor: _FilterColors.evOperator,
+      label: name == null
+          ? 'Opérateur'
+          : name.length <= _maxLabel
+          ? name
+          : '${name.substring(0, _maxLabel - 1).trimRight()}…',
+      trailing: selected != null
+          ? GestureDetector(
+              onTap: () =>
+                  ref.read(evOperatorFilterProvider.notifier).state = null,
+              child: const Icon(Icons.close_rounded, size: 15),
+            )
+          : null,
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => const _OperatorPickerSheet(),
+      ),
     );
   }
 }
 
-class _EvFreeChip extends ConsumerWidget {
-  const _EvFreeChip();
+/// Every operator in France, the largest first, with a search field: there
+/// are several hundred.
+class _OperatorPickerSheet extends ConsumerStatefulWidget {
+  const _OperatorPickerSheet();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final active = ref.watch(evFreeOnlyProvider);
-    return _Pill(
-      selected: active,
-      icon: Icons.money_off_rounded,
-      iconColor: _FilterColors.evFree,
-      label: 'Gratuit',
-      onTap: () => ref.read(evFreeOnlyProvider.notifier).state = !active,
+  ConsumerState<_OperatorPickerSheet> createState() =>
+      _OperatorPickerSheetState();
+}
+
+class _OperatorPickerSheetState extends ConsumerState<_OperatorPickerSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final operatorsAsync = ref.watch(evOperatorsProvider);
+    final selected = ref.watch(evOperatorFilterProvider);
+    final favorites = ref.watch(favoriteEvOperatorsProvider.notifier);
+    ref.watch(favoriteEvOperatorsProvider);
+    final query = _query.trim().toLowerCase();
+    final matching = [
+      for (final o in operatorsAsync.valueOrNull ?? const <EvOperator>[])
+        if (query.isEmpty || o.name.toLowerCase().contains(query)) o,
+    ];
+    // Les favoris d'abord, chacun dans l'ordre de la liste (les plus gros
+    // en premier).
+    final operators = [
+      ...matching.where(favorites.isFavorite),
+      ...matching.where((o) => !favorites.isFavorite(o)),
+    ];
+    final muted = Theme.of(context).colorScheme.onSurface
+        .withValues(alpha: 0.55);
+
+    final Widget body;
+    if (operatorsAsync.isLoading) {
+      body = const Center(
+        child: LoadingBar(label: 'Chargement des opérateurs…'),
+      );
+    } else if (operatorsAsync.hasError) {
+      body = Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Impossible de charger les opérateurs.',
+              style: TextStyle(color: muted),
+            ),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(evOperatorsProvider),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    } else if (operators.isEmpty) {
+      body = Center(
+        child: Text(
+          'Aucun opérateur ne correspond.',
+          style: TextStyle(color: muted),
+        ),
+      );
+    } else {
+      body = ListView.builder(
+        itemCount: operators.length,
+        itemBuilder: (context, index) {
+          final o = operators[index];
+          final favorite = favorites.isFavorite(o);
+          return ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.only(right: 16),
+            leading: IconButton(
+              tooltip: favorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+              icon: Icon(
+                favorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: favorite ? const Color(0xFFFFB300) : muted,
+              ),
+              onPressed: () => favorites.toggle(o),
+            ),
+            title: Text(o.name),
+            subtitle: Text(
+              o.pointCount == 1
+                  ? '1 point de charge'
+                  : '${o.pointCount} points de charge',
+            ),
+            trailing: o.name == selected?.name
+                ? const Icon(Icons.check_rounded)
+                : null,
+            onTap: () {
+              ref.read(evOperatorFilterProvider.notifier).state = o;
+              Navigator.of(context).pop();
+            },
+          );
+        },
+      );
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Opérateur', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Rechercher un opérateur…',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+              const SizedBox(height: 8),
+              Expanded(child: body),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

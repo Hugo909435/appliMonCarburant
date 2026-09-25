@@ -9,6 +9,7 @@ import '../../../providers/ev_stations_provider.dart';
 import '../../../providers/filters_provider.dart';
 import '../../../providers/location_provider.dart';
 import '../../../shared/widgets/ad_slot.dart';
+import '../../../shared/widgets/loading_bar.dart';
 import '../../../shared/widgets/station_list_tile.dart';
 import '../../../shared/widgets/station_sheet.dart';
 import 'ev_station_sheet.dart';
@@ -255,7 +256,22 @@ class _EvSheetContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stations = ref.watch(viewportEvStationsProvider);
     final loading = ref.watch(evStationsProvider.select((v) => v.isLoading));
+    final failed = ref.watch(
+      evStationsProvider.select((v) => v.hasError && !v.isLoading),
+    );
     final ads = InFeedAds(stations.length);
+
+    // Tant que la zone charge, « Aucune borne » serait faux : on dit qu'on
+    // cherche, et qu'on met à jour quand d'autres bornes sont déjà là.
+    final (title, subtitle) = switch ((stations.isEmpty, loading, failed)) {
+      (true, true, _) => ('Recherche…', 'des bornes dans la zone affichée'),
+      (true, false, true) => ('Bornes indisponibles', 'réseau ou service'),
+      (false, true, _) => (
+        _countLabel(stations.length, 'borne'),
+        'mise à jour de la zone…',
+      ),
+      _ => (_countLabel(stations.length, 'borne'), 'dans la zone affichée'),
+    };
 
     return CustomScrollView(
       controller: scrollController,
@@ -263,7 +279,8 @@ class _EvSheetContent extends ConsumerWidget {
         SliverPersistentHeader(
           pinned: true,
           delegate: _HeaderDelegate(
-            title: _countLabel(stations.length, 'borne'),
+            title: title,
+            subtitle: subtitle,
             onTap: onHeaderTap,
             toggle: _SortToggle<EvSort>(
               provider: evSortProvider,
@@ -279,8 +296,22 @@ class _EvSheetContent extends ConsumerWidget {
           SliverToBoxAdapter(
             child: loading
                 ? const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
+                    padding: EdgeInsets.fromLTRB(24, 32, 24, 24),
+                    child: Center(
+                      child: LoadingBar(
+                        label: 'Recherche des bornes de recharge…',
+                      ),
+                    ),
+                  )
+                : failed
+                ? _EmptyState(
+                    'Impossible de charger les bornes pour le moment.\n'
+                    'Vérifiez votre connexion.',
+                    action: TextButton.icon(
+                      onPressed: () => ref.invalidate(evStationsProvider),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Réessayer'),
+                    ),
                   )
                 : const _EmptyState(
                     'Aucune borne ne correspond ici.\n'
@@ -322,9 +353,11 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.title,
     required this.toggle,
     required this.onTap,
+    this.subtitle = 'dans la zone affichée',
   });
 
   final String title;
+  final String subtitle;
   final Widget toggle;
   final VoidCallback onTap;
 
@@ -335,7 +368,8 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => kStationsSheetPeek;
 
   @override
-  bool shouldRebuild(_HeaderDelegate old) => old.title != title;
+  bool shouldRebuild(_HeaderDelegate old) =>
+      old.title != title || old.subtitle != subtitle;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlaps) {
@@ -368,7 +402,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
                     children: [
                       Text(title, style: textTheme.titleLarge),
                       Text(
-                        'dans la zone affichée',
+                        subtitle,
                         style: textTheme.bodySmall?.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.55),
                         ),
@@ -492,9 +526,10 @@ class _SortToggle<T> extends ConsumerWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState(this.message);
+  const _EmptyState(this.message, {this.action});
 
   final String message;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -511,6 +546,7 @@ class _EmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: muted),
           ),
+          if (action != null) ...[const SizedBox(height: 8), action!],
         ],
       ),
     );

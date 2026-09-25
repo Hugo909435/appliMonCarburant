@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/models/ev_station.dart';
 import '../data/models/fuel_type.dart';
 import 'preferences_provider.dart';
 
@@ -98,16 +99,57 @@ final favoritesOnlyProvider = StateProvider<bool>((ref) => false);
 /// "Lavage"), or null for no filter.
 final selectedServiceProvider = StateProvider<String?>((ref) => null);
 
-/// Restrict EV chargers to a single plug type (e.g. "Combo CCS"), or null
-/// for no filter.
+/// Restrict EV chargers to a single connector (a key of [evPlugFields],
+/// e.g. "Combo CCS"), or null for no filter.
 final plugTypeFilterProvider = StateProvider<String?>((ref) => null);
 
-/// Restrict EV chargers to fast-charging ones (>= 50 kW) only.
-final fastChargeOnlyProvider = StateProvider<bool>((ref) => false);
+/// The minimum powers the chargers filter offers, in kW.
+const evPowerSteps = [3, 7, 22, 50, 100, 350];
 
-/// Restrict EV chargers to free-to-use ones only.
-final evFreeOnlyProvider = StateProvider<bool>((ref) => false);
+/// Restrict EV chargers to those reaching this power (one of
+/// [evPowerSteps], in kW), or null for no filter.
+final evMinPowerProvider = StateProvider<int?>((ref) => null);
 
-/// Restrict EV chargers to a single network/operator (e.g. "TESLA
-/// SUPERCHARGER"), or null for no filter.
-final evNetworkFilterProvider = StateProvider<String?>((ref) => null);
+/// Restrict EV chargers to a single operator, or null for no filter.
+final evOperatorFilterProvider = StateProvider<EvOperator?>((ref) => null);
+
+/// Every chargers filter at once, as the API gets it.
+final evFilterProvider = Provider<EvFilter>(
+  (ref) => EvFilter(
+    plug: ref.watch(plugTypeFilterProvider),
+    evOperator: ref.watch(evOperatorFilterProvider),
+    minPowerKw: ref.watch(evMinPowerProvider),
+  ),
+);
+
+const _favoriteOperatorsKey = 'favorite_ev_operators';
+
+/// The operators starred in the operator filter, listed first there. Kept
+/// on the device, as lowercased names ([EvOperator] merges spellings that
+/// differ only in case).
+class FavoriteEvOperatorsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {
+    ...?ref
+        .read(sharedPreferencesProvider)
+        ?.getStringList(_favoriteOperatorsKey),
+  };
+
+  static String _key(EvOperator operator) => operator.name.toLowerCase();
+
+  bool isFavorite(EvOperator operator) => state.contains(_key(operator));
+
+  void toggle(EvOperator operator) {
+    final key = _key(operator);
+    state = state.contains(key) ? ({...state}..remove(key)) : {...state, key};
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs != null) {
+      unawaited(prefs.setStringList(_favoriteOperatorsKey, state.toList()));
+    }
+  }
+}
+
+final favoriteEvOperatorsProvider =
+    NotifierProvider<FavoriteEvOperatorsNotifier, Set<String>>(
+      FavoriteEvOperatorsNotifier.new,
+    );

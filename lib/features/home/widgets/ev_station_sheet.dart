@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/directions.dart';
 import '../../../data/models/ev_station.dart';
+import '../../../providers/ev_stations_provider.dart';
 import '../../../shared/widgets/brand_badge.dart';
+import '../../../shared/widgets/loading_bar.dart';
 
 Future<void> showEvStationSheet(BuildContext context, EvStation station) {
   return showModalBottomSheet(
@@ -13,7 +16,7 @@ Future<void> showEvStationSheet(BuildContext context, EvStation station) {
   );
 }
 
-class _EvStationSheetContent extends StatelessWidget {
+class _EvStationSheetContent extends ConsumerWidget {
   const _EvStationSheetContent({required this.station});
 
   final EvStation station;
@@ -22,8 +25,12 @@ class _EvStationSheetContent extends StatelessWidget {
       openDirectionsTo(station.lat, station.lng, label: station.name);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    // Chargés à l'ouverture : la carte ne les télécharge pas pour chaque
+    // borne. En cas d'échec, la fiche s'en passe.
+    final detailsAsync = ref.watch(evStationDetailsProvider(station.id));
+    final details = detailsAsync.valueOrNull;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -77,7 +84,7 @@ class _EvStationSheetContent extends StatelessWidget {
                         : Icons.payments_rounded,
                     label: station.free ? 'Gratuit' : 'Payant',
                   ),
-                  if (station.pmrAccessible)
+                  if (details?.pmrAccessible ?? false)
                     const _InfoChip(
                       icon: Icons.accessible_rounded,
                       label: 'Accessible PMR',
@@ -97,15 +104,19 @@ class _EvStationSheetContent extends StatelessWidget {
                   ],
                 ),
               ],
-              if (station.accessCondition.isNotEmpty ||
-                  station.hours.isNotEmpty) ...[
+              if (detailsAsync.isLoading) ...[
+                const SizedBox(height: 16),
+                const Center(child: LoadingBar()),
+              ] else if (details != null &&
+                  (details.accessCondition.isNotEmpty ||
+                      details.hours.isNotEmpty)) ...[
                 const SizedBox(height: 16),
                 Text('Infos', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 6),
-                if (station.accessCondition.isNotEmpty)
-                  Text(station.accessCondition),
-                if (station.hours.isNotEmpty)
-                  Text('Horaires : ${station.hours}'),
+                if (details.accessCondition.isNotEmpty)
+                  Text(details.accessCondition),
+                if (details.hours.isNotEmpty)
+                  Text('Horaires : ${details.hours}'),
               ],
               const SizedBox(height: 20),
               SizedBox(

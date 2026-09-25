@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 
 import '../data/models/ev_station.dart';
 import '../data/services/irve_service.dart';
@@ -15,7 +16,13 @@ final evStationsProvider = FutureProvider.autoDispose<List<EvStation>>((
 ) async {
   final layer = ref.watch(mapLayerProvider);
   final bounds = ref.watch(mapBoundsProvider);
+  final filter = ref.watch(evFilterProvider);
   if (layer != MapLayer.bornes || bounds == null) return const [];
+
+  // The map moving on rebuilds this provider: drop the request it no longer
+  // needs instead of letting it hold the connection and the parser.
+  final client = http.Client();
+  ref.onDispose(client.close);
 
   return ref
       .watch(irveServiceProvider)
@@ -24,5 +31,20 @@ final evStationsProvider = FutureProvider.autoDispose<List<EvStation>>((
         west: bounds.west,
         north: bounds.north,
         east: bounds.east,
+        filter: filter,
+        client: client,
       );
 });
+
+/// The sheet-only details of the charger with this id, loaded when its
+/// sheet opens (the map's fetch leaves them out).
+final evStationDetailsProvider = FutureProvider.autoDispose
+    .family<EvStationDetails, String>(
+      (ref, id) => ref.watch(irveServiceProvider).fetchDetails(id),
+    );
+
+/// Every charging operator in France, for the operator filter. Kept once
+/// loaded: the list barely changes.
+final evOperatorsProvider = FutureProvider<List<EvOperator>>(
+  (ref) => ref.watch(irveServiceProvider).fetchOperators(),
+);
