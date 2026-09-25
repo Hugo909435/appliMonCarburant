@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/fuel_colors.dart';
+import '../../core/utils/fill_cost.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/price_gaps.dart';
 import '../../data/models/fuel_type.dart';
@@ -11,7 +12,6 @@ import '../../providers/comparison_provider.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/stations_provider.dart';
-import '../../providers/vehicle_provider.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/price_gap_label.dart';
@@ -131,7 +131,7 @@ class _VerdictCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fuel = ref.watch(selectedFuelProvider);
-    final liters = ref.watch(vehicleProfileProvider).fillLiters;
+    const liters = kTypicalFillLiters;
     final theme = Theme.of(context);
 
     final gaps = priceGaps({

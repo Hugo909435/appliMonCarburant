@@ -8,10 +8,8 @@ import '../../data/services/notification_service.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/price_alerts_provider.dart';
-import '../vehicle/widgets/vehicle_form.dart';
 
 enum _Step {
-  vehicle('Voiture', Icons.directions_car_rounded),
   location('Localisation', Icons.near_me_rounded),
   notifications('Alertes', Icons.notifications_active_rounded);
 
@@ -21,8 +19,8 @@ enum _Step {
   final IconData icon;
 }
 
-/// Accueil du premier lancement, en étapes : la voiture, la localisation,
-/// puis les alertes de prix. Chaque étape peut être passée ; tout se
+/// Accueil du premier lancement, en étapes : la localisation, puis les
+/// alertes de prix. Chaque étape peut être passée ; tout se
 /// règle plus tard depuis l'écran Compte.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -35,7 +33,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Sans tâche de fond (web, Windows), des alertes n'arriveraient qu'app
   /// ouverte : l'étape n'a pas lieu d'être.
   late final _steps = [
-    _Step.vehicle,
     _Step.location,
     if (NotificationService.isSupported) _Step.notifications,
   ];
@@ -66,8 +63,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Après un refus, le bouton principal sert simplement à continuer.
     if (_message != null) return _next();
     switch (_step) {
-      case _Step.vehicle:
-        _next();
       case _Step.location:
         await _run(_enableLocation);
       case _Step.notifications:
@@ -193,14 +188,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _primaryLabel(bool isLast) {
     if (_message != null) return isLast ? 'Terminer' : 'Continuer';
     return switch (_step) {
-      _Step.vehicle => 'Continuer',
       _Step.location => 'Activer la localisation',
       _Step.notifications => 'Activer les alertes',
     };
   }
 
   List<Widget> _content() => switch (_step) {
-    _Step.vehicle => const [VehicleForm()],
     _Step.location => const [
       _Benefit(
         icon: Icons.local_gas_station_rounded,
@@ -395,15 +388,11 @@ class _StepHeader extends StatelessWidget {
   final _Step step;
 
   static const _titles = {
-    _Step.vehicle: 'Votre voiture',
     _Step.location: 'Les stations autour de vous',
     _Step.notifications: 'Restez informé des baisses',
   };
 
   static const _subtitles = {
-    _Step.vehicle:
-        'Pour afficher directement votre carburant et calculer ce que '
-        'vous coûte vraiment un plein.',
     _Step.location:
         'Autorisez la localisation pour trouver le meilleur prix près de '
         'vous.',

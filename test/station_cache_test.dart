@@ -12,7 +12,19 @@ void main() {
     cache = StationCache(directory: () async => dir);
   });
 
-  tearDown(() => dir.delete(recursive: true));
+  tearDown(() async {
+    // Sous Windows, l'antivirus tient parfois un instant le fichier qu'on
+    // vient d'écrire : la suppression échoue (« répertoire non vide »). On
+    // réessaie, et un dossier temporaire oublié ne fait pas échouer le test.
+    for (var attempt = 0; attempt < 10; attempt++) {
+      try {
+        await dir.delete(recursive: true);
+        return;
+      } on FileSystemException {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
+  });
 
   List<Map<String, dynamic>> stations(int count, String tag) => [
     for (var i = 0; i < count; i++) {'id': '$tag$i', 'ville': 'Lyon'},

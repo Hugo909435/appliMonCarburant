@@ -17,7 +17,6 @@ import '../features/privacy/privacy_screen.dart';
 import '../features/route/route_screen.dart';
 import '../features/search/search_results_screen.dart';
 import '../features/station_detail/station_detail_screen.dart';
-import '../features/vehicle/vehicle_screen.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/stats_provider.dart';
 
@@ -67,11 +66,6 @@ final _routes = <RouteBase>[
     parentNavigatorKey: _rootNavigatorKey,
     path: '/compte',
     builder: (context, state) => const AccountScreen(),
-  ),
-  GoRoute(
-    parentNavigatorKey: _rootNavigatorKey,
-    path: '/vehicule',
-    builder: (context, state) => const VehicleScreen(),
   ),
   GoRoute(
     parentNavigatorKey: _rootNavigatorKey,

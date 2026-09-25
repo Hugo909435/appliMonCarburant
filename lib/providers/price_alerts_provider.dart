@@ -6,7 +6,7 @@ import '../data/services/notification_service.dart';
 import '../data/services/price_alert_service.dart';
 import '../data/services/price_alert_task.dart';
 import 'favorites_provider.dart';
-import 'vehicle_provider.dart';
+import 'filters_provider.dart';
 
 final priceAlertServiceProvider = Provider<PriceAlertService>(
   (ref) => PriceAlertService(),
@@ -57,8 +57,7 @@ final priceAlertSyncProvider = Provider<void>((ref) {
     final ids = next.valueOrNull;
     if (ids != null) sync(() => service.syncFavorites(ids));
   }, fireImmediately: true);
-  ref.listen(vehicleProvider, (_, next) {
-    final profile = next.valueOrNull;
-    if (profile != null) sync(() => service.syncFuel(profile.fuel));
+  ref.listen(selectedFuelProvider, (_, fuel) {
+    sync(() => service.syncFuel(fuel));
   }, fireImmediately: true);
 });

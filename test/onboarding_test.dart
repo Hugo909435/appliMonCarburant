@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mon_carburant_app/data/models/fuel_type.dart';
 import 'package:mon_carburant_app/features/onboarding/onboarding_screen.dart';
-import 'package:mon_carburant_app/providers/filters_provider.dart';
 import 'package:mon_carburant_app/providers/onboarding_provider.dart';
 import 'package:mon_carburant_app/providers/preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -54,9 +52,7 @@ void main() {
     });
   });
 
-  testWidgets('walks through the three steps and remembers the fuel', (
-    tester,
-  ) async {
+  testWidgets('walks through the steps, each one skippable', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -72,25 +68,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Étape 1 : la voiture.
-    expect(find.text('Votre voiture'), findsOneWidget);
-    await tester.tap(find.text(FuelType.sp98.label));
-    await tester.pumpAndSettle();
-    expect(container.read(selectedFuelProvider), FuelType.sp98);
-    await tester.tap(find.text('Continuer'));
-    await tester.pumpAndSettle();
-
-    // Étape 2 : la localisation, passée.
+    // Plus d'étape « Voiture » : l'accueil commence par la localisation.
+    expect(find.text('Votre voiture'), findsNothing);
     expect(find.text('Les stations autour de vous'), findsOneWidget);
     await tester.tap(find.text('Plus tard'));
     await tester.pumpAndSettle();
 
-    // Étape 3 : les alertes, passées aussi — l'accueil est terminé.
+    // Puis les alertes, passées aussi — l'accueil est terminé.
     expect(find.text('Restez informé des baisses'), findsOneWidget);
     await tester.tap(find.text('Plus tard'));
     await tester.pumpAndSettle();
 
     expect(container.read(onboardingDoneProvider), isTrue);
-    expect(prefs.getString('vehicle_fuel'), FuelType.sp98.code);
   });
 }

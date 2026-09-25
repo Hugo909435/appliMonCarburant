@@ -1,16 +1,57 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/fuel_type.dart';
 import 'preferences_provider.dart';
-import 'vehicle_provider.dart';
 
-/// Fuel the map shows prices for. Opens on the car's fuel (see
-/// [VehicleProfile.fuel]); changing it on the map lasts for the session.
+/// Carburant affiché sur la carte, par défaut tant que l'utilisateur n'en a
+/// pas choisi d'autre.
+const kDefaultFuel = FuelType.gazole;
+
+const _fuelKey = 'preferred_fuel';
+
+/// Réglages de l'ancien écran « Mon véhicule », retiré de l'app.
+const _legacyFuelKey = 'vehicle_fuel';
+const _legacyVehicleKeys = [
+  _legacyFuelKey,
+  'vehicle_consumption_l100',
+  'vehicle_fill_liters',
+  'vehicle_electric',
+];
+
+/// À appeler au lancement : reprend le carburant de l'ancien écran « Mon
+/// véhicule » comme carburant préféré, puis efface ses réglages.
+Future<void> migrateVehiclePreferences(SharedPreferences prefs) async {
+  final legacyFuel = prefs.getString(_legacyFuelKey);
+  if (legacyFuel != null && !prefs.containsKey(_fuelKey)) {
+    await prefs.setString(_fuelKey, legacyFuel);
+  }
+  for (final key in _legacyVehicleKeys) {
+    if (prefs.containsKey(key)) await prefs.remove(key);
+  }
+}
+
+/// Fuel the map shows prices for. Opens on the last one picked (see
+/// [fuelPreferenceSyncProvider]).
 final selectedFuelProvider = StateProvider<FuelType>(
   (ref) =>
-      VehicleNotifier.savedFuel(ref.read(sharedPreferencesProvider)) ??
-      VehicleProfile.defaults.fuel,
+      FuelType.fromCode(
+        ref.read(sharedPreferencesProvider)?.getString(_fuelKey) ?? '',
+      ) ??
+      kDefaultFuel,
 );
+
+/// Retient le carburant choisi, pour rouvrir la carte dessus. À surveiller
+/// depuis la racine de l'app.
+final fuelPreferenceSyncProvider = Provider<void>((ref) {
+  final prefs = ref.read(sharedPreferencesProvider);
+  if (prefs == null) return;
+  ref.listen(selectedFuelProvider, (_, fuel) {
+    unawaited(prefs.setString(_fuelKey, fuel.code));
+  });
+});
 
 /// What the map is currently showing markers for. Fuel stations by
 /// default, so the home screen opens straight onto prices and the list of

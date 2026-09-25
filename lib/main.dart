@@ -14,6 +14,7 @@ import 'core/utils/platform_support.dart';
 import 'data/services/price_alert_service.dart';
 import 'data/services/price_alert_task.dart';
 import 'firebase_options.dart';
+import 'providers/filters_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/preferences_provider.dart';
 
@@ -43,6 +44,9 @@ Future<void> main() async {
       }
       final prefs = await SharedPreferences.getInstance();
       await OnboardingNotifier.skipForExistingInstall(prefs);
+      // Après : les anciens réglages du véhicule signalent encore une
+      // installation antérieure à l'accueil.
+      await migrateVehiclePreferences(prefs);
       await _startPriceAlerts();
       runApp(
         ProviderScope(

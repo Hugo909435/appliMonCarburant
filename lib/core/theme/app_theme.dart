@@ -216,8 +216,19 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: container,
+        // Pastille choisie : fond de la marque, texte et coche blancs. Sans
+        // cela, le texte gardait la couleur des pastilles libres, bleu nuit
+        // sur bleu nuit en thème clair : le carburant choisi était illisible.
+        selectedColor: brand,
+        checkmarkColor: Colors.white,
         side: BorderSide.none,
-        labelStyle: textTheme.labelMedium?.copyWith(color: onSurface),
+        labelStyle: textTheme.labelMedium?.copyWith(
+          color: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? Colors.white
+                : onSurface,
+          ),
+        ),
         // Sans ceci, l'avatar d'un Chip garde la couleur d'icône par défaut
         // de Material, pensée pour un fond clair : en thème sombre elle
         // disparaît dans la puce.

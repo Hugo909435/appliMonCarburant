@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/filters_provider.dart';
 import 'providers/price_alerts_provider.dart';
 import 'providers/stations_provider.dart';
 import 'router/app_router.dart';
@@ -18,6 +19,7 @@ class MonCarburantApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(authBootstrapProvider);
     ref.watch(priceAlertSyncProvider);
+    ref.watch(fuelPreferenceSyncProvider);
     return MaterialApp.router(
       title: 'Mon Carburant',
       debugShowCheckedModeBanner: false,

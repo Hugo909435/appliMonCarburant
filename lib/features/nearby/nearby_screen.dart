@@ -9,7 +9,6 @@ import '../../data/models/station.dart';
 import '../../providers/derived_providers.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
-import '../../providers/vehicle_provider.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/station_list_tile.dart';
 import '../../shared/widgets/ad_slot.dart';
@@ -53,7 +52,6 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     final nearby = ref.watch(nearbyStationsProvider);
     final location = ref.watch(userLocationProvider);
     final fuel = ref.watch(selectedFuelProvider);
-    final vehicle = ref.watch(vehicleProfileProvider);
 
     final entries = <_Entry>[];
     for (final n in nearby) {
@@ -67,8 +65,8 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
           price,
           computeFillCost(
             pricePerLiter: price,
-            liters: vehicle.fillLiters,
-            consumptionL100: vehicle.consumptionL100,
+            liters: kTypicalFillLiters,
+            consumptionL100: kTypicalConsumptionL100,
             detourKm: n.distanceKm,
           ),
         ),
@@ -90,16 +88,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Autour de moi'),
-        actions: [
-          IconButton(
-            tooltip: 'Mon véhicule',
-            icon: const Icon(Icons.directions_car_outlined),
-            onPressed: () => context.push('/vehicule'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Autour de moi')),
       body: Column(
         children: [
           const SizedBox(height: 12),
@@ -128,7 +117,7 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: Text(
-                'Plein de ${vehicle.fillLiters.round()} L + carburant consommé '
+                'Plein de ${kTypicalFillLiters.round()} L + carburant consommé '
                 "pour l'aller-retour jusqu'à la station.",
                 style: Theme.of(context).textTheme.bodySmall,
               ),

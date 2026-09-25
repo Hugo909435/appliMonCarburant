@@ -321,7 +321,6 @@ void main() {
       await _pumpAccount(tester);
 
       expect(find.text('Confidentialité'), findsOneWidget);
-      expect(find.text('Mon véhicule'), findsOneWidget);
     });
 
     testWidgets('la version est affichée, pour le support', (tester) async {

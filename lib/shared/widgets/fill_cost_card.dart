@@ -6,7 +6,6 @@ import '../../core/utils/fill_cost.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/station.dart';
 import '../../providers/filters_provider.dart';
-import '../../providers/vehicle_provider.dart';
 
 /// "Plein de 40 L ici : 72,40 € + 1,10 € de trajet", for the fuel currently
 /// selected. Hidden when the station doesn't sell that fuel.
@@ -25,14 +24,13 @@ class FillCostCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fuel = ref.watch(selectedFuelProvider);
-    final vehicle = ref.watch(vehicleProfileProvider);
     final price = station.prices[fuel.code];
     if (price == null) return const SizedBox.shrink();
 
     final cost = computeFillCost(
       pricePerLiter: price,
-      liters: vehicle.fillLiters,
-      consumptionL100: vehicle.consumptionL100,
+      liters: kTypicalFillLiters,
+      consumptionL100: kTypicalConsumptionL100,
       detourKm: distanceKm,
     );
     final theme = Theme.of(context);
@@ -49,7 +47,7 @@ class FillCostCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Plein de ${vehicle.fillLiters.round()} L de ${fuel.code}',
+                    'Plein de ${kTypicalFillLiters.round()} L de ${fuel.code}',
                     style: theme.textTheme.bodySmall,
                   ),
                   Text(

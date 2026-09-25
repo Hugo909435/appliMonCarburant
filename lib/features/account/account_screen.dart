@@ -103,12 +103,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           const SectionTitle('Réglages'),
           SettingsGroup(
             children: [
-              SettingsTile(
-                icon: Icons.directions_car_outlined,
-                title: 'Mon véhicule',
-                subtitle: 'Carburant, consommation et taille du plein',
-                onTap: () => context.push('/vehicule'),
-              ),
               if (NotificationService.isSupported) const _PriceAlertsTile(),
               SettingsTile(
                 icon: Icons.privacy_tip_outlined,

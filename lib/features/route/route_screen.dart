@@ -15,7 +15,6 @@ import '../../providers/routing_provider.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/stations_provider.dart';
-import '../../providers/vehicle_provider.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/station_list_tile.dart';
 import '../../shared/widgets/station_sheet.dart';
@@ -140,7 +139,6 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
   @override
   Widget build(BuildContext context) {
     final fuel = ref.watch(selectedFuelProvider);
-    final vehicle = ref.watch(vehicleProfileProvider);
 
     final candidates = [
       for (final s in _stationsOnRoute)
@@ -150,8 +148,8 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
             price,
             computeFillCost(
               pricePerLiter: price,
-              liters: vehicle.fillLiters,
-              consumptionL100: vehicle.consumptionL100,
+              liters: kTypicalFillLiters,
+              consumptionL100: kTypicalConsumptionL100,
               detourKm: s.offRouteKm,
             ),
           ),
@@ -226,7 +224,7 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
                 route: _route!,
                 candidates: candidates,
                 best: byCost.firstOrNull,
-                fillLiters: vehicle.fillLiters,
+                fillLiters: kTypicalFillLiters,
               ),
             ),
             if (candidates.isNotEmpty)

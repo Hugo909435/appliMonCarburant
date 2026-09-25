@@ -3,6 +3,14 @@
 /// without calling a routing service for each one.
 const kRoadDetourFactor = 1.3;
 
+/// Plein de référence pour chiffrer le coût réel : ce que met une voiture
+/// thermique moyenne à chaque passage à la pompe.
+const kTypicalFillLiters = 40.0;
+
+/// Consommation de référence, en L/100 km, pour valoriser le trajet
+/// jusqu'à la station.
+const kTypicalConsumptionL100 = 6.5;
+
 /// What a fill-up actually costs once the trip to reach the station is
 /// counted: a station 3 cts cheaper but 10 km away is often a bad deal.
 class FillCost {

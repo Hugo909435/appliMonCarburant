@@ -92,11 +92,6 @@ const _sections = [
         'uniquement à corriger les bugs.',
   ),
   _Section(
-    'Vos données de véhicule',
-    "La consommation et la taille du réservoir que vous saisissez restent sur "
-        'votre appareil.',
-  ),
-  _Section(
     'Vos droits',
     "Vous pouvez à tout moment vous déconnecter, révoquer l’accès à la "
         'position dans les réglages du système, ou supprimer votre compte et '

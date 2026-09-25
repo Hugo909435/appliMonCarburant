@@ -19,6 +19,9 @@ double _contrast(Color a, Color b) {
 /// Seuil WCAG AA pour un élément graphique non textuel.
 const _minIconContrast = 3.0;
 
+/// Seuil WCAG AA pour du texte courant.
+const _minTextContrast = 4.5;
+
 /// L'encre de la charte, un bleu nuit (#0F2D3F), est à un cheveu du fond
 /// sombre (#070D12/#111B22). Une couleur d'icône écrite en dur plutôt
 /// que laissée au thème y tombe sous 1,5:1 — invisible.
@@ -91,6 +94,45 @@ void main() {
           greaterThanOrEqualTo(_minIconContrast),
         );
       });
+
+      for (final selected in [false, true]) {
+        testWidgets(
+          'le libellé d’une pastille ${selected ? 'choisie' : 'libre'} '
+          'se lit',
+          (tester) async {
+            // Le carburant choisi s'affichait bleu nuit sur bleu nuit.
+            final theme = build();
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: theme,
+                home: Scaffold(
+                  body: Center(
+                    child: ChoiceChip(
+                      label: const Text('Gazole'),
+                      selected: selected,
+                      onSelected: (_) {},
+                    ),
+                  ),
+                ),
+              ),
+            );
+            final label = tester.widget<RichText>(
+              find.descendant(
+                of: find.text('Gazole'),
+                matching: find.byType(RichText),
+              ),
+            );
+            final background = selected
+                ? theme.chipTheme.selectedColor!
+                : theme.chipTheme.backgroundColor!;
+
+            expect(
+              _contrast(label.text.style!.color!, background),
+              greaterThanOrEqualTo(_minTextContrast),
+            );
+          },
+        );
+      }
     });
   }
 }
