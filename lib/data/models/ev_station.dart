@@ -47,7 +47,8 @@ class EvStation {
       if (_isTrue(row['prise_type_combo_ccs'])) plugTypes.add('Combo CCS');
       if (_isTrue(row['prise_type_chademo'])) plugTypes.add('CHAdeMO');
       if (_isTrue(row['prise_type_ef'])) plugTypes.add('Type EF');
-      pointCount += int.tryParse('${row['nbre_pdc'] ?? ''}') ?? 1;
+      // Grouped rows count their charge points in `pdc`.
+      pointCount += (row['pdc'] as num?)?.toInt() ?? 1;
     }
     return EvStation(
       id: id,

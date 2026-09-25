@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mon_carburant_app/data/models/ev_station.dart';
 import 'package:mon_carburant_app/data/models/station.dart';
 import 'package:mon_carburant_app/features/home/home_screen.dart';
 
@@ -101,6 +102,45 @@ void main() {
       final shown = _shown(many, zoom: 8, zoneFiltered: true);
 
       expect(shown.stations.length, lessThan(700));
+    });
+  });
+
+  group('bornes', () {
+    EvStation borne(int i, {required double kw}) => EvStation(
+      id: '$i',
+      name: 'Borne $i',
+      network: '',
+      address: '',
+      lat: 43.66 + (i % 12) * 0.008,
+      lng: 7.15 + (i ~/ 12) * 0.012,
+      pointCount: 1,
+      maxPowerKw: kw,
+      plugTypes: const [],
+      free: false,
+      accessCondition: '',
+      hours: '',
+      pmrAccessible: false,
+    );
+
+    test('en vue large, la plus puissante de chaque case seulement', () {
+      final bornes = [
+        for (var i = 0; i < 120; i++) borne(i, kw: i == 57 ? 350 : 22),
+      ];
+
+      final shown = markerEvStations(bornes, zoom: 8);
+
+      expect(shown.mode, MarkerMode.plain);
+      expect(shown.stations.length, lessThan(120));
+      expect(shown.stations.map((e) => e.id), contains('57'));
+    });
+
+    test('au niveau de la rue, toutes, regroupées', () {
+      final bornes = [for (var i = 0; i < 120; i++) borne(i, kw: 22)];
+
+      final shown = markerEvStations(bornes, zoom: 15);
+
+      expect(shown.mode, MarkerMode.clustered);
+      expect(shown.stations, hasLength(120));
     });
   });
 }

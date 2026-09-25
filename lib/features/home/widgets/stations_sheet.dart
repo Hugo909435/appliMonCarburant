@@ -380,7 +380,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
               ],
             ),
             const Spacer(),
-            Divider(color: scheme.outline.withValues(alpha: 0.6)),
+            Divider(height: 1, color: scheme.outline.withValues(alpha: 0.6)),
           ],
         ),
       ),

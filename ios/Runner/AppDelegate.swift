@@ -11,7 +11,7 @@ import workmanager_apple
 
   /// `PriceAlertScheduler.every`, en secondes : délai avant la vérification
   /// suivante, reprogrammée à la fin de chacune.
-  private static let priceAlertsEvery: NSNumber = 12 * 60 * 60
+  private static let priceAlertsEvery: NSNumber = NSNumber(value: 12 * 60 * 60)
 
   override func application(
     _ application: UIApplication,

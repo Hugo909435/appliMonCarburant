@@ -62,6 +62,11 @@ const _maxZoneMarkers = 600;
 const _dotCellPx = 44.0;
 const _totemCellPx = 88.0;
 
+/// Même chose pour les bornes : le point de la vue large, puis le rond à
+/// éclair (voir [_EvMarker]) sous [_detailZoomThreshold] et au-delà.
+const _evDotCellPx = 24.0;
+const _evIconCellPx = 44.0;
+
 /// Diamètre de la pastille d'enseigne montrée sous [_detailZoomThreshold].
 ///
 /// Le logo n'occupe que le carré inscrit dans le rond, anneau déduit : il est
@@ -728,9 +733,6 @@ enum MarkerMode {
 
 /// Keeps at most one station per [cellPx]-wide square of the screen at
 /// [zoom] — the cheapest for [fuelCode] — plus every favorite.
-///
-/// The grid is laid on the Web Mercator world at the whole zoom level, not
-/// on the viewport, so panning doesn't reshuffle which station a cell keeps.
 List<Station> _thinOut(
   List<Station> stations, {
   required double zoom,
@@ -738,29 +740,75 @@ List<Station> _thinOut(
   required String fuelCode,
   required Set<String> favoriteIds,
 }) {
+  double price(Station s) => s.prices[fuelCode] ?? double.infinity;
+  return _thinOnGrid(
+    stations,
+    zoom: zoom,
+    cellPx: cellPx,
+    lat: (s) => s.lat,
+    lng: (s) => s.lng,
+    isBetter: (a, b) => price(a) < price(b),
+    keep: (s) => favoriteIds.contains(s.id),
+  );
+}
+
+/// Keeps at most one of [items] per [cellPx]-wide square of the screen at
+/// [zoom] — the one [isBetter] ranks first — plus every one [keep] accepts.
+///
+/// The grid is laid on the Web Mercator world at the whole zoom level, not
+/// on the viewport, so panning doesn't reshuffle which item a cell keeps.
+List<T> _thinOnGrid<T>(
+  List<T> items, {
+  required double zoom,
+  required double cellPx,
+  required double Function(T) lat,
+  required double Function(T) lng,
+  required bool Function(T a, T b) isBetter,
+  bool Function(T)? keep,
+}) {
   final worldPx = 256 * math.pow(2, zoom.floor());
-  final cheapest = <(int, int), Station>{};
-  final kept = <Station>[];
-  for (final s in stations) {
-    if (favoriteIds.contains(s.id)) {
-      kept.add(s);
+  final best = <(int, int), T>{};
+  final kept = <T>[];
+  for (final item in items) {
+    if (keep != null && keep(item)) {
+      kept.add(item);
       continue;
     }
-    final latRad = s.lat * math.pi / 180;
-    final x = (s.lng + 180) / 360 * worldPx;
+    final latRad = lat(item) * math.pi / 180;
+    final x = (lng(item) + 180) / 360 * worldPx;
     final y =
         (1 - math.log(math.tan(latRad) + 1 / math.cos(latRad)) / math.pi) /
         2 *
         worldPx;
     final cell = ((x / cellPx).floor(), (y / cellPx).floor());
-    final current = cheapest[cell];
-    final price = s.prices[fuelCode] ?? double.infinity;
-    if (current == null ||
-        price < (current.prices[fuelCode] ?? double.infinity)) {
-      cheapest[cell] = s;
-    }
+    final current = best[cell];
+    if (current == null || isBetter(item, current)) best[cell] = item;
   }
-  return kept..addAll(cheapest.values);
+  return kept..addAll(best.values);
+}
+
+/// Les bornes du viewport à dessiner à [zoom], et comment : comme les
+/// stations (voir [markerStations]), la plus puissante de chaque case de
+/// l'écran en vue large, toutes, regroupées, à partir de [_thinningMaxZoom].
+@visibleForTesting
+({List<EvStation> stations, MarkerMode mode}) markerEvStations(
+  List<EvStation> stations, {
+  required double zoom,
+}) {
+  if (zoom >= _thinningMaxZoom) {
+    return (stations: stations, mode: MarkerMode.clustered);
+  }
+  return (
+    stations: _thinOnGrid(
+      stations,
+      zoom: zoom,
+      cellPx: zoom >= _detailZoomThreshold ? _evIconCellPx : _evDotCellPx,
+      lat: (e) => e.lat,
+      lng: (e) => e.lng,
+      isBetter: (a, b) => a.maxPowerKw > b.maxPowerKw,
+    ),
+    mode: MarkerMode.plain,
+  );
 }
 
 class _EvMarkersLayer extends ConsumerWidget {
@@ -768,24 +816,49 @@ class _EvMarkersLayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final evStations = ref.watch(filteredEvStationsProvider);
+    final bounds = ref.watch(mapBoundsProvider);
+    final zoom = ref.watch(mapZoomProvider);
+    if (bounds == null || zoom == null) return const SizedBox.shrink();
+
+    // Comme pour les stations : seulement les bornes autour de l'écran, pas
+    // les milliers chargées pour toute la zone.
+    final padded = bounds.expanded(_viewportPadding);
+    final evStations = [
+      for (final e in ref.watch(filteredEvStationsProvider))
+        if (e.lat >= padded.south &&
+            e.lat <= padded.north &&
+            e.lng >= padded.west &&
+            e.lng <= padded.east)
+          e,
+    ];
+
+    // Vue large : un simple point, comme les stations y deviennent des
+    // pastilles ; le rond à éclair y déborderait des côtes et des frontières.
+    final compact = zoom < _detailZoomThreshold;
+    Marker markerFor(EvStation ev) => Marker(
+      point: ll.LatLng(ev.lat, ev.lng),
+      width: compact ? 22 : 44,
+      height: compact ? 22 : 44,
+      child: _EvMarker(
+        station: ev,
+        compact: compact,
+        onTap: () => showEvStationSheet(context, ev),
+      ),
+    );
+
+    final shown = markerEvStations(evStations, zoom: zoom);
+    if (shown.mode == MarkerMode.plain) {
+      // Les plus puissantes en dernier, dessinées par-dessus leurs voisines.
+      final sorted = [...shown.stations]
+        ..sort((a, b) => a.maxPowerKw.compareTo(b.maxPowerKw));
+      return MarkerLayer(markers: [for (final e in sorted) markerFor(e)]);
+    }
 
     return MarkerClusterLayerWidget(
       options: MarkerClusterLayerOptions(
         maxClusterRadius: 60,
         size: const Size(40, 40),
-        markers: [
-          for (final ev in evStations)
-            Marker(
-              point: ll.LatLng(ev.lat, ev.lng),
-              width: 44,
-              height: 44,
-              child: _EvMarker(
-                station: ev,
-                onTap: () => showEvStationSheet(context, ev),
-              ),
-            ),
-        ],
+        markers: [for (final ev in shown.stations) markerFor(ev)],
         builder: (context, markers) => CircleAvatar(
           backgroundColor: const Color(0xFF2F8F5B),
           child: Text(
@@ -922,13 +995,39 @@ class _StationMarker extends StatelessWidget {
 }
 
 class _EvMarker extends StatelessWidget {
-  const _EvMarker({required this.station, required this.onTap});
+  const _EvMarker({
+    required this.station,
+    required this.onTap,
+    this.compact = false,
+  });
 
   final EvStation station;
   final VoidCallback onTap;
 
+  /// Un point de couleur sans éclair, pour la vue large.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Center(
+          child: Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: evPowerColor(station.maxPowerKw),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 2),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return GestureDetector(
       onTap: onTap,
       child: Container(
