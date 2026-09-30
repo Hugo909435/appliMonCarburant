@@ -1,7 +1,6 @@
 import 'dart:convert';
-import 'dart:isolate';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/ev_station.dart';
@@ -97,39 +96,53 @@ class IrveService {
     final fetchWest = west - lngPad;
     final fetchEast = east + lngPad;
 
-    final uri = Uri.parse(_url).replace(
+    final area = [
+      'consolidated_latitude in [$fetchSouth..$fetchNorth]',
+      'consolidated_longitude in [$fetchWest..$fetchEast]',
+      if (!filter.isEmpty) filter.where,
+    ].join(' and ');
+    // Sorting on the raw power would put a 7 kW charger published in watts
+    // (7400) ahead of a 350 kW one: the kW ones are sorted and cut by the
+    // limit, the few published in watts (~1k charge points in the whole
+    // feed) come from a second request, never cut.
+    Uri query(String unit) => Uri.parse(_url).replace(
       queryParameters: {
         'select':
             '${_groupFields.join(',')},'
             'max(puissance_nominale) as puissance_max,'
             'count(*) as pdc',
         'group_by': _groupFields.join(','),
-        'where': [
-          'consolidated_latitude in [$fetchSouth..$fetchNorth]',
-          'consolidated_longitude in [$fetchWest..$fetchEast]',
-          if (!filter.isEmpty) filter.where,
-        ].join(' and '),
+        'where': '$area and $unit',
         'order_by': 'puissance_max desc',
         'limit': '$_maxGroups',
       },
     );
 
     final fetch = ++_fetchCount;
-    const headers = {'User-Agent': AppConfig.userAgent};
-    final response =
-        await (client == null
-                ? http.get(uri, headers: headers)
-                : client.get(uri, headers: headers))
-            .timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Échec du chargement des bornes de recharge (HTTP ${response.statusCode})',
-      );
+    Future<Uint8List> get(Uri uri) async {
+      const headers = {'User-Agent': AppConfig.userAgent};
+      final response =
+          await (client == null
+                  ? http.get(uri, headers: headers)
+                  : client.get(uri, headers: headers))
+              .timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Échec du chargement des bornes de recharge (HTTP ${response.statusCode})',
+        );
+      }
+      return response.bodyBytes;
     }
 
+    final bodies = await Future.wait([
+      get(query('not puissance_nominale > $evWattsAbove')),
+      get(query('puissance_nominale > $evWattsAbove')),
+    ]);
+
     // Up to ~11 MB of JSON over the whole country: decoded off the UI
-    // thread, which it would otherwise freeze for a good half-second.
-    final parsed = await Isolate.run(() => _parse(response.bodyBytes));
+    // thread, which it would otherwise freeze for a good half-second
+    // (inline on web, which has no isolates).
+    final parsed = await compute(_parse, bodies);
     // The filter changed while this was loading: its chargers are no longer
     // the ones asked for, and nobody is waiting on them any more.
     if (filter != _filter) return const [];
@@ -144,7 +157,7 @@ class IrveService {
         west: fetchWest,
         north: fetchNorth,
         east: fetchEast,
-        complete: parsed.rowCount < _maxGroups,
+        complete: parsed.kwRowCount < _maxGroups,
       );
     }
     return _knownIn(fetchSouth, fetchWest, fetchNorth, fetchEast);
@@ -216,10 +229,16 @@ class IrveService {
   ];
 }
 
-/// The stations of a grouped IRVE response, and how many rows it held.
-({List<EvStation> stations, int rowCount}) _parse(Uint8List bytes) {
-  final body = jsonDecode(utf8.decode(bytes)) as Map;
-  final records = (body['results'] as List).cast<Map<String, dynamic>>();
+/// The stations of the grouped IRVE responses [bodies] (the kW one first,
+/// then the watts one), and how many rows the kW one held. A station with
+/// charge points in both units has rows in each, merged here.
+({List<EvStation> stations, int kwRowCount}) _parse(List<Uint8List> bodies) {
+  final responses = [
+    for (final bytes in bodies)
+      ((jsonDecode(utf8.decode(bytes)) as Map)['results'] as List)
+          .cast<Map<String, dynamic>>(),
+  ];
+  final records = responses.expand((rows) => rows);
 
   final byStation = <String, List<Map<String, dynamic>>>{};
   for (final row in records) {
@@ -234,7 +253,7 @@ class IrveService {
       for (final entry in byStation.entries)
         EvStation.fromRecords(entry.key, entry.value),
     ],
-    rowCount: records.length,
+    kwRowCount: responses.first.length,
   );
 }
 

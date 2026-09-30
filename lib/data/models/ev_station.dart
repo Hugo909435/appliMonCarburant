@@ -132,12 +132,12 @@ class EvStationDetails {
 }
 
 /// Some operators publish their power in watts (22000 for 22 kW): anything
-/// over [_wattsAbove] can't be kW, no charger is that powerful.
-const _wattsAbove = 1000.0;
+/// over [evWattsAbove] can't be kW, no charger is that powerful.
+const evWattsAbove = 1000.0;
 
 /// [power] from the feed in kW, whichever unit it was published in.
 double? evPowerKw(double? power) =>
-    power == null || power <= _wattsAbove ? power : power / 1000;
+    power == null || power <= evWattsAbove ? power : power / 1000;
 
 /// A charging operator of the feed. Some are published under several
 /// spellings differing only in case ("LIDL France", "Lidl France"): they
@@ -198,7 +198,7 @@ class EvFilter {
   /// nothing is filtered.
   String get where {
     String quoted(String s) =>
-        '"${s.replaceAll(r'\', r'\').replaceAll('"', r'\"')}"';
+        '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
     String flagged(String field) => '(lower($field) = "true" or $field = "1")';
 
     final plugField = evPlugFields[plug];
@@ -210,7 +210,7 @@ class EvFilter {
       // Les puissances publiées en watts comptent aussi (voir evPowerKw).
       if (minKw != null)
         '((puissance_nominale >= $minKw and '
-            'puissance_nominale <= $_wattsAbove) or '
+            'puissance_nominale <= $evWattsAbove) or '
             'puissance_nominale >= ${minKw * 1000})',
     ].join(' and ');
   }
