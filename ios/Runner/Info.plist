@@ -35,7 +35,7 @@
 		<!-- Renseigné automatiquement depuis GoogleService-Info.plist par
 	     tool/ios_apply_google_config.sh — ne pas saisir à la main. -->
 		<key>GIDClientID</key>
-		<string>A_REMPLIR_PAR_tool_ios_apply_google_config</string>
+		<string>567705907889-10a4grt60hgd4gp615bort901umeabdi.apps.googleusercontent.com</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
@@ -45,7 +45,7 @@
 				<string>google-sign-in</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>A_REMPLIR_PAR_tool_ios_apply_google_config</string>
+					<string>com.googleusercontent.apps.567705907889-10a4grt60hgd4gp615bort901umeabdi</string>
 				</array>
 			</dict>
 		</array>
