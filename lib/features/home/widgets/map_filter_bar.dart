@@ -32,103 +32,163 @@ class _FilterColors {
 }
 
 /// The horizontal filter row floating over the map, under the search: fuel stations
-/// vs. EV chargers, then (for fuel stations) fuel type, brand, motorway and
-/// favorites-only refinements.
-class MapFilterBar extends ConsumerWidget {
+/// vs. EV chargers, a "Filtres" button opening every filter at once, then
+/// (for fuel stations) fuel type, brand, motorway and favorites-only
+/// refinements, the active ones first.
+///
+/// Only two or three chips fit on a phone, so the row shows a chevron on
+/// its right edge while more are hidden past it.
+class MapFilterBar extends ConsumerStatefulWidget {
   const MapFilterBar({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MapFilterBar> createState() => _MapFilterBarState();
+}
+
+class _MapFilterBarState extends ConsumerState<MapFilterBar> {
+  final _scroll = ScrollController();
+  bool _moreLeft = false;
+  bool _moreRight = false;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool _onMetrics(ScrollMetrics m) {
+    final left = m.pixels > 4;
+    final right = m.pixels < m.maxScrollExtent - 4;
+    if (left != _moreLeft || right != _moreRight) {
+      setState(() {
+        _moreLeft = left;
+        _moreRight = right;
+      });
+    }
+    return false;
+  }
+
+  void _scrollForward() {
+    final p = _scroll.position;
+    _scroll.animateTo(
+      (p.pixels + p.viewportDimension * 0.6).clamp(0, p.maxScrollExtent),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final layer = ref.watch(mapLayerProvider);
 
+    // Actifs d'abord : un filtre posé reste visible sans faire défiler.
+    final refinements = switch (layer) {
+      MapLayer.stations => [
+        (ref.watch(selectedBrandProvider) != null, const _BrandChip()),
+        (ref.watch(departmentFilterProvider) != null, const _DepartmentChip()),
+        (ref.watch(highwayFilterProvider) != null, const _AutorouteChip()),
+        (ref.watch(selectedServiceProvider) != null, const _ServiceChip()),
+        (ref.watch(favoritesOnlyProvider), const _FavoritesChip()),
+      ],
+      MapLayer.bornes => [
+        (ref.watch(plugTypeFilterProvider) != null, const _PlugTypeChip()),
+        (ref.watch(evOperatorFilterProvider) != null, const _EvOperatorChip()),
+        (ref.watch(evMinPowerProvider) != null, const _EvPowerChip()),
+      ],
+      null => <(bool, Widget)>[],
+    };
+    final chips = [
+      ...refinements.where((r) => r.$1).map((r) => r.$2),
+      ...refinements.where((r) => !r.$1).map((r) => r.$2),
+    ];
+
     // Posée entre la loupe et le compte : sa hauteur garde de la place pour
-    // l'ombre des pastilles, que la liste rognerait sinon, et un fondu sur
-    // chaque bord montre qu'elle défile au lieu de la trancher net.
+    // l'ombre des pastilles, que la liste rognerait sinon. Le fondu n'apparaît
+    // que du côté où il reste des filtres à voir.
     return SizedBox(
       height: 60,
-      child: ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (bounds) => const LinearGradient(
-          colors: [
-            Colors.transparent,
-            Colors.black,
-            Colors.black,
-            Colors.transparent,
-          ],
-          stops: [0, 0.04, 0.94, 1],
-        ).createShader(bounds),
-        child: ScrollConfiguration(
-          behavior: _DragScrollBehavior(),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(8, 11, 12, 11),
-            children: [
-              if (layer == null) ...[
-                // Nothing picked yet: show full labels as a clear call to
-                // action, instead of two unlabeled logos with no context.
-                _Pill(
-                  selected: false,
-                  icon: Icons.local_gas_station_rounded,
-                  iconColor: _FilterColors.stations,
-                  label: 'Stations',
-                  onTap: () => ref.read(mapLayerProvider.notifier).state =
-                      MapLayer.stations,
-                ),
-                const SizedBox(width: 8),
-                _Pill(
-                  selected: false,
-                  icon: Icons.ev_station_rounded,
-                  iconColor: _FilterColors.bornes,
-                  label: 'Bornes électriques',
-                  onTap: () => ref.read(mapLayerProvider.notifier).state =
-                      MapLayer.bornes,
-                ),
-              ] else ...[
-                _LogoBadge(
-                  icon: Icons.local_gas_station_rounded,
-                  color: _FilterColors.stations,
-                  selected: layer == MapLayer.stations,
-                  tooltip: 'Stations',
-                  onTap: () => ref.read(mapLayerProvider.notifier).state =
-                      MapLayer.stations,
-                ),
-                const SizedBox(width: 8),
-                _LogoBadge(
-                  icon: Icons.ev_station_rounded,
-                  color: _FilterColors.bornes,
-                  selected: layer == MapLayer.bornes,
-                  tooltip: 'Bornes électriques',
-                  tintIcon: true,
-                  fillWithColor: true,
-                  onTap: () => ref.read(mapLayerProvider.notifier).state =
-                      MapLayer.bornes,
-                ),
+      child: Stack(
+        alignment: Alignment.centerRight,
+        children: [
+          ShaderMask(
+            blendMode: BlendMode.dstIn,
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                _moreLeft ? Colors.transparent : Colors.black,
+                Colors.black,
+                Colors.black,
+                _moreRight ? Colors.transparent : Colors.black,
               ],
-              if (layer == MapLayer.stations) ...[
-                const SizedBox(width: 14),
-                const _FuelChip(),
-                const SizedBox(width: 8),
-                const _BrandChip(),
-                const SizedBox(width: 8),
-                const _DepartmentChip(),
-                const SizedBox(width: 8),
-                const _AutorouteChip(),
-                const SizedBox(width: 8),
-                const _ServiceChip(),
-                const SizedBox(width: 8),
-                const _FavoritesChip(),
-              ],
-              if (layer == MapLayer.bornes) ...[
-                const SizedBox(width: 14),
-                const _PlugTypeChip(),
-                const SizedBox(width: 8),
-                const _EvOperatorChip(),
-                const SizedBox(width: 8),
-                const _EvPowerChip(),
-              ],
-            ],
+              stops: const [0, 0.05, 0.8, 1],
+            ).createShader(bounds),
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (n) => _onMetrics(n.metrics),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (n) => _onMetrics(n.metrics),
+                child: ScrollConfiguration(
+                  behavior: _DragScrollBehavior(),
+                  child: ListView(
+                    controller: _scroll,
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(8, 11, 40, 11),
+                    children: [
+                      if (layer == null) ...[
+                        // Nothing picked yet: show full labels as a clear
+                        // call to action, instead of two unlabeled logos.
+                        _Pill(
+                          selected: false,
+                          icon: Icons.local_gas_station_rounded,
+                          iconColor: _FilterColors.stations,
+                          label: 'Stations',
+                          onTap: () =>
+                              ref.read(mapLayerProvider.notifier).state =
+                                  MapLayer.stations,
+                        ),
+                        const SizedBox(width: 8),
+                        _Pill(
+                          selected: false,
+                          icon: Icons.ev_station_rounded,
+                          iconColor: _FilterColors.bornes,
+                          label: 'Bornes électriques',
+                          onTap: () =>
+                              ref.read(mapLayerProvider.notifier).state =
+                                  MapLayer.bornes,
+                        ),
+                      ] else ...[
+                        _LayerToggle(
+                          layer: layer,
+                          onChanged: (l) =>
+                              ref.read(mapLayerProvider.notifier).state = l,
+                        ),
+                        const SizedBox(width: 8),
+                        const _AllFiltersButton(),
+                        if (layer == MapLayer.stations) ...[
+                          const SizedBox(width: 8),
+                          const _FuelChip(),
+                        ],
+                        for (final chip in chips) ...[
+                          const SizedBox(width: 8),
+                          chip,
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.only(right: 2),
+            child: IgnorePointer(
+              ignoring: !_moreRight,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: _moreRight ? 1 : 0,
+                child: _MoreArrow(onTap: _scrollForward),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -146,61 +206,414 @@ class _DragScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
-/// A round "logo" badge — used for the always-icon-only filters (map
-/// layer). Selected = filled navy, unselected = white, so the row stays
-/// compact without ever showing a label.
-class _LogoBadge extends StatelessWidget {
-  const _LogoBadge({
+/// Stations / bornes as one segmented capsule, so the pair reads as a
+/// single switch rather than two more filters.
+class _LayerToggle extends StatelessWidget {
+  const _LayerToggle({required this.layer, required this.onChanged});
+
+  final MapLayer layer;
+  final ValueChanged<MapLayer> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget segment(MapLayer value, IconData icon, Color color, String tip) {
+      final selected = layer == value;
+      return Tooltip(
+        message: tip,
+        child: GestureDetector(
+          onTap: () => onChanged(value),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: selected ? color : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 18, color: selected ? Colors.white : color),
+          ),
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.all(Radius.circular(19)),
+        boxShadow: _chipShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            segment(
+              MapLayer.stations,
+              Icons.local_gas_station_rounded,
+              _FilterColors.stations,
+              'Stations',
+            ),
+            const SizedBox(width: 2),
+            segment(
+              MapLayer.bornes,
+              Icons.ev_station_rounded,
+              _FilterColors.bornes,
+              'Bornes électriques',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Round white button on the row's right edge, shown while chips are
+/// hidden past it.
+class _MoreArrow extends StatelessWidget {
+  const _MoreArrow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Plus de filtres',
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 3,
+        shadowColor: Colors.black38,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: const SizedBox(
+            width: 30,
+            height: 30,
+            child: Icon(
+              Icons.chevron_right_rounded,
+              size: 22,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// How many refinements are set on the current layer (the fuel type, always
+/// set, doesn't count).
+final _activeFilterCountProvider = Provider.autoDispose<int>((ref) {
+  final active = switch (ref.watch(mapLayerProvider)) {
+    MapLayer.stations => [
+      ref.watch(selectedBrandProvider) != null,
+      ref.watch(departmentFilterProvider) != null,
+      ref.watch(highwayFilterProvider) != null,
+      ref.watch(selectedServiceProvider) != null,
+      ref.watch(favoritesOnlyProvider),
+    ],
+    MapLayer.bornes => [
+      ref.watch(plugTypeFilterProvider) != null,
+      ref.watch(evOperatorFilterProvider) != null,
+      ref.watch(evMinPowerProvider) != null,
+    ],
+    null => const <bool>[],
+  };
+  return active.where((a) => a).length;
+});
+
+/// Clears every refinement of the current layer, keeping the fuel type.
+void _clearFilters(WidgetRef ref) {
+  switch (ref.read(mapLayerProvider)) {
+    case MapLayer.stations:
+      ref.read(selectedBrandProvider.notifier).state = null;
+      ref.read(departmentFilterProvider.notifier).state = null;
+      ref.read(highwayFilterProvider.notifier).state = null;
+      ref.read(selectedServiceProvider.notifier).state = null;
+      ref.read(favoritesOnlyProvider.notifier).state = false;
+    case MapLayer.bornes:
+      ref.read(plugTypeFilterProvider.notifier).state = null;
+      ref.read(evOperatorFilterProvider.notifier).state = null;
+      ref.read(evMinPowerProvider.notifier).state = null;
+    case null:
+      break;
+  }
+}
+
+/// "Filtres" button with the number of active filters: an entry point that
+/// stays in view whatever fits in the row.
+class _AllFiltersButton extends ConsumerWidget {
+  const _AllFiltersButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(_activeFilterCountProvider);
+    return _Pill(
+      selected: count > 0,
+      icon: Icons.tune_rounded,
+      label: 'Filtres',
+      trailing: count > 0
+          ? Container(
+              constraints: const BoxConstraints(minWidth: 17),
+              height: 17,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(9)),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            )
+          : null,
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (context) => const _AllFiltersSheet(),
+      ),
+    );
+  }
+}
+
+/// Every filter of the current layer as a list, each with its current
+/// value. A row opens that filter's own picker on top.
+class _AllFiltersSheet extends ConsumerWidget {
+  const _AllFiltersSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final layer = ref.watch(mapLayerProvider);
+    final count = ref.watch(_activeFilterCountProvider);
+    final theme = Theme.of(context);
+
+    final List<Widget> rows;
+    if (layer == MapLayer.bornes) {
+      final plug = ref.watch(plugTypeFilterProvider);
+      final op = ref.watch(evOperatorFilterProvider);
+      final power = ref.watch(evMinPowerProvider);
+      rows = [
+        _FilterRow(
+          icon: Icons.power_rounded,
+          color: _FilterColors.plugType,
+          title: 'Connecteur',
+          value: plug,
+          onTap: () => _PlugTypeChip._pickPlugType(context, ref),
+          onClear: () => ref.read(plugTypeFilterProvider.notifier).state = null,
+        ),
+        _FilterRow(
+          icon: Icons.apartment_rounded,
+          color: _FilterColors.evOperator,
+          title: 'Opérateur',
+          value: op?.name,
+          onTap: () => _EvOperatorChip._pickOperator(context),
+          onClear: () =>
+              ref.read(evOperatorFilterProvider.notifier).state = null,
+        ),
+        _FilterRow(
+          icon: Icons.bolt_rounded,
+          color: _FilterColors.power,
+          title: 'Puissance minimale',
+          value: power == null ? null : '$power kW et +',
+          onTap: () => _EvPowerChip._pickPower(context, ref),
+          onClear: () => ref.read(evMinPowerProvider.notifier).state = null,
+        ),
+      ];
+    } else {
+      final fuel = ref.watch(selectedFuelProvider);
+      final brandKey = ref.watch(selectedBrandProvider);
+      final dep = ref.watch(departmentFilterProvider);
+      final depName = dep == null
+          ? null
+          : (ref.watch(departmentsDataProvider).valueOrNull?[dep]?.name ?? dep);
+      final highway = ref.watch(highwayFilterProvider);
+      final service = ref.watch(selectedServiceProvider);
+      final favorites = ref.watch(favoritesOnlyProvider);
+      rows = [
+        _FilterRow(
+          icon: Icons.water_drop_rounded,
+          color: fuel.color,
+          title: 'Carburant',
+          value: fuel.code,
+          onTap: () => _FuelChip._pickFuel(context, ref),
+        ),
+        _FilterRow(
+          icon: Icons.storefront_rounded,
+          color: _FilterColors.enseigne,
+          title: 'Enseigne',
+          value: brandKey == null ? null : brandForKey(brandKey)?.name,
+          onTap: () => _BrandChip._pickBrand(context, ref),
+          onClear: () => ref.read(selectedBrandProvider.notifier).state = null,
+        ),
+        _FilterRow(
+          icon: Icons.map_rounded,
+          color: _FilterColors.departement,
+          title: 'Département',
+          value: depName,
+          onTap: () => _DepartmentChip._pickDepartment(context, ref),
+          onClear: () =>
+              ref.read(departmentFilterProvider.notifier).state = null,
+        ),
+        _FilterRow(
+          icon: Icons.route_rounded,
+          color: _FilterColors.autoroute,
+          title: 'Autoroute',
+          value: highway == null
+              ? null
+              : highway == kAnyHighway
+              ? 'Toutes les autoroutes'
+              : highway,
+          onTap: () => _AutorouteChip._pickHighway(context, ref),
+          onClear: () => ref.read(highwayFilterProvider.notifier).state = null,
+        ),
+        _FilterRow(
+          icon: Icons.room_service_rounded,
+          color: _FilterColors.service,
+          title: 'Service',
+          value: service,
+          onTap: () => _ServiceChip._pickService(context, ref),
+          onClear: () =>
+              ref.read(selectedServiceProvider.notifier).state = null,
+        ),
+        SwitchListTile(
+          contentPadding: const EdgeInsets.only(left: 20, right: 16),
+          secondary: const _FilterIcon(
+            icon: Icons.star_rounded,
+            color: _FilterColors.favoris,
+          ),
+          title: const Text(
+            'Favoris uniquement',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          value: favorites,
+          onChanged: (v) => ref.read(favoritesOnlyProvider.notifier).state = v,
+        ),
+      ];
+    }
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    layer == MapLayer.bornes
+                        ? 'Filtres des bornes'
+                        : 'Filtres des stations',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (count > 0)
+                  TextButton(
+                    onPressed: () => _clearFilters(ref),
+                    child: const Text('Tout effacer'),
+                  ),
+              ],
+            ),
+          ),
+          Flexible(child: ListView(shrinkWrap: true, children: rows)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Voir la carte'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A filter's colored icon on a tinted rounded square.
+class _FilterIcon extends StatelessWidget {
+  const _FilterIcon({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: color, size: 20),
+    );
+  }
+}
+
+/// One line of the filters sheet: icon, name, current value ("Tous" when
+/// unset) and either a clear button or a chevron.
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
     required this.icon,
     required this.color,
-    required this.selected,
+    required this.title,
+    required this.value,
     required this.onTap,
-    required this.tooltip,
-    this.tintIcon = false,
-    this.fillWithColor = false,
+    this.onClear,
   });
 
   final IconData icon;
   final Color color;
-  final bool selected;
+  final String title;
+  final String? value;
   final VoidCallback onTap;
-  final String tooltip;
 
-  /// When true, the icon itself is always tinted with [color] (like the
-  /// other filters' logos), instead of staying black until selected.
-  final bool tintIcon;
-
-  /// When true, the badge fills with [color] once selected, instead of the
-  /// app's navy.
-  final bool fillWithColor;
+  /// Null for a filter that's always set (the fuel type).
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 38,
-          height: 38,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected
-                ? (fillWithColor ? color : AppColors.primary)
-                : Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: _chipShadow,
-          ),
-          child: Icon(
-            icon,
-            color: selected
-                ? Colors.white
-                : (tintIcon ? color : AppColors.primary),
-            size: 18,
-          ),
+    final theme = Theme.of(context);
+    final active = value != null && onClear != null;
+    return ListTile(
+      contentPadding: const EdgeInsets.only(left: 20, right: 8),
+      leading: _FilterIcon(icon: icon, color: color),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        value ?? 'Tous',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: active
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.55),
+          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
         ),
       ),
+      trailing: active
+          ? IconButton(
+              tooltip: 'Retirer ce filtre',
+              icon: const Icon(Icons.close_rounded, size: 20),
+              onPressed: onClear,
+            )
+          : const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Icon(Icons.chevron_right_rounded),
+            ),
+      onTap: onTap,
     );
   }
 }
@@ -223,7 +636,7 @@ class _FuelChip extends ConsumerWidget {
     );
   }
 
-  void _pickFuel(BuildContext context, WidgetRef ref) {
+  static void _pickFuel(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
@@ -291,7 +704,7 @@ class _BrandChip extends ConsumerWidget {
   /// Only brands with a logo in `assets/logos/` are offered: the others
   /// (small independents, one-off names from OpenStreetMap) made a long,
   /// noisy list of initials.
-  ({List<(FuelBrand, int)> visible, List<(FuelBrand, int)> elsewhere})
+  static ({List<(FuelBrand, int)> visible, List<(FuelBrand, int)> elsewhere})
   _brandsByVisibility(WidgetRef ref, Set<String> logoAssets) {
     final brands =
         ref.read(stationBrandsProvider).valueOrNull ??
@@ -324,7 +737,7 @@ class _BrandChip extends ConsumerWidget {
     );
   }
 
-  Future<void> _pickBrand(BuildContext context, WidgetRef ref) async {
+  static Future<void> _pickBrand(BuildContext context, WidgetRef ref) async {
     final Set<String> logoAssets;
     try {
       logoAssets = await ref.read(brandLogoAssetsProvider.future);
@@ -433,7 +846,7 @@ class _AutorouteChip extends ConsumerWidget {
     );
   }
 
-  void _pickHighway(BuildContext context, WidgetRef ref) {
+  static void _pickHighway(BuildContext context, WidgetRef ref) {
     final highways = ref.read(autoroutesListProvider);
 
     showModalBottomSheet<void>(
@@ -519,7 +932,7 @@ class _ServiceChip extends ConsumerWidget {
     );
   }
 
-  void _pickService(BuildContext context, WidgetRef ref) {
+  static void _pickService(BuildContext context, WidgetRef ref) {
     final stations = ref.read(stationsProvider).valueOrNull ?? const [];
     final services = stations.expand((s) => s.services).toSet().toList()
       ..sort();
@@ -617,7 +1030,7 @@ class _DepartmentChip extends ConsumerWidget {
     );
   }
 
-  void _pickDepartment(BuildContext context, WidgetRef ref) {
+  static void _pickDepartment(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -731,7 +1144,7 @@ class _PlugTypeChip extends ConsumerWidget {
     );
   }
 
-  void _pickPlugType(BuildContext context, WidgetRef ref) {
+  static void _pickPlugType(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => _ChoiceSheet(
@@ -773,7 +1186,7 @@ class _EvPowerChip extends ConsumerWidget {
     );
   }
 
-  void _pickPower(BuildContext context, WidgetRef ref) {
+  static void _pickPower(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => _ChoiceSheet(
@@ -846,11 +1259,15 @@ class _EvOperatorChip extends ConsumerWidget {
               child: const Icon(Icons.close_rounded, size: 15),
             )
           : null,
-      onTap: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) => const _OperatorPickerSheet(),
-      ),
+      onTap: () => _pickOperator(context),
+    );
+  }
+
+  static void _pickOperator(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const _OperatorPickerSheet(),
     );
   }
 }
