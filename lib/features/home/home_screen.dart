@@ -281,6 +281,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ? ll.LatLng(position.latitude, position.longitude)
                     : HomeScreen._franceCenter,
                 initialZoom: position != null ? 12 : 5.5,
+                // Un pincement ne fait que zoomer : sans rotation ni
+                // déplacement, la carte ne glisse plus de côté quand les
+                // doigts dérivent. Le glisser à un doigt reste là pour bouger.
+                interactionOptions: const InteractionOptions(
+                  flags:
+                      InteractiveFlag.all &
+                      ~InteractiveFlag.rotate &
+                      ~InteractiveFlag.pinchMove,
+                ),
                 onTap: (_, _) => _dismissResults(),
                 onPositionChanged: _onPositionChanged,
                 // Publish the viewport as soon as the map is laid out: until
