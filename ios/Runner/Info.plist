@@ -57,6 +57,11 @@
 		<true/>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Mon Carburant utilise votre position pour afficher les stations-service les plus proches de vous et les prix des carburants autour de vous.</string>
+		<!-- Exigée par Apple (ITMS-90683) parce que geolocator contient le code
+		     de la demande « Toujours ». L'app ne la fait jamais : elle ne
+		     demande la position que pendant l'utilisation. -->
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Mon Carburant utilise votre position uniquement lorsque l'app est ouverte, pour afficher les stations-service les plus proches de vous. Votre position n'est jamais suivie en arrière-plan.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>
