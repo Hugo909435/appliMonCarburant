@@ -17,8 +17,8 @@ class GeocodingResult {
   final double lng;
 }
 
-/// Free-text address search backed by Nominatim (OpenStreetMap), the same
-/// data source as the map tiles — no API key required.
+/// Free-text address search from a Nominatim-compatible API
+/// (OpenStreetMap data, like the map tiles).
 class GeocodingService {
   static const _url = AppConfig.nominatimBaseUrl;
 
@@ -26,10 +26,14 @@ class GeocodingService {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
 
-    final uri = Uri.parse(_url).replace(
-      queryParameters: {
+    // `json` rather than `jsonv2`: hosted Nominatim-compatible APIs
+    // (LocationIQ) only accept the former, and both carry the fields read
+    // below.
+    final uri = AppConfig.endpoint(
+      _url,
+      query: {
         'q': trimmed,
-        'format': 'jsonv2',
+        'format': 'json',
         'countrycodes': 'fr',
         'limit': '5',
         'addressdetails': '0',

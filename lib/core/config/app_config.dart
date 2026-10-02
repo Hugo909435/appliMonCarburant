@@ -15,10 +15,14 @@ import 'package:flutter/foundation.dart';
 ///
 /// ```bash
 /// flutter build ipa \
-///   --dart-define=MC_TILE_URL=https://{s}.tuiles.exemple.fr/{z}/{x}/{y}.png \
-///   --dart-define=MC_OSRM_URL=https://osrm.exemple.fr/route/v1/driving \
-///   --dart-define=MC_NOMINATIM_URL=https://geocode.exemple.fr/search
+///   --dart-define=MC_TILE_URL='https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=CLE' \
+///   --dart-define=MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap' \
+///   --dart-define=MC_OSRM_URL='https://eu1.locationiq.com/v1/directions/driving?key=CLE' \
+///   --dart-define=MC_NOMINATIM_URL='https://eu1.locationiq.com/v1/search?key=CLE'
 /// ```
+///
+/// Les fournisseurs commerciaux passent leur clé dans l'URL : les services
+/// conservent la requête de l'URL de base (voir [endpoint]).
 ///
 /// `tool/build_release.sh` regroupe ces options ; [usesPublicDemoServices]
 /// permet de vérifier, à l'exécution, qu'un build de production ne les a pas
@@ -39,6 +43,13 @@ class AppConfig {
     defaultValue: _defaultTileUrl,
   );
 
+  /// Crédit affiché sur la carte. Le fournisseur de tuiles impose souvent
+  /// d'y figurer à côté d'OpenStreetMap.
+  static const tileAttribution = String.fromEnvironment(
+    'MC_TILE_ATTRIBUTION',
+    defaultValue: '© OpenStreetMap contributors',
+  );
+
   /// Racine du service d'itinéraire (API OSRM v1).
   static const osrmBaseUrl = String.fromEnvironment(
     'MC_OSRM_URL',
@@ -50,6 +61,21 @@ class AppConfig {
     'MC_NOMINATIM_URL',
     defaultValue: _defaultNominatimUrl,
   );
+
+  /// URL d'appel d'un service : [base] prolongée de [path], avec [query]
+  /// ajoutée à la requête que [base] porte déjà (la clé d'API d'un
+  /// fournisseur, typiquement) au lieu de la remplacer.
+  static Uri endpoint(
+    String base, {
+    String path = '',
+    Map<String, String> query = const {},
+  }) {
+    final uri = Uri.parse(base);
+    return uri.replace(
+      path: '${uri.path}$path',
+      queryParameters: {...uri.queryParameters, ...query},
+    );
+  }
 
   /// Active les emplacements publicitaires (voir `AdSlot`). Éteint par
   /// défaut : tant qu'aucune régie n'est branchée, un build de release

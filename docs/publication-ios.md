@@ -53,13 +53,16 @@ bloquer, et la carte deviendrait grise chez tout le monde en même temps.
 - [ ] Faire de même pour le routage (OSRM auto-hébergé, ou une API commerciale)
       et le géocodage (Nominatim auto-hébergé, ou l'API Adresse de
       data.gouv.fr, gratuite et sans quota strict pour la France).
-- [ ] Créer `tool/.env.release` (non versionné) :
+- [ ] Créer `tool/.env.release` (non versionné). Exemple avec MapTiler pour
+      les tuiles et LocationIQ (API compatibles OSRM et Nominatim) pour le
+      reste — la clé d'API reste dans l'URL :
 
-      MC_TILE_URL=https://tuiles.exemple.fr/{z}/{x}/{y}.png
-      MC_OSRM_URL=https://osrm.exemple.fr/route/v1/driving
-      MC_NOMINATIM_URL=https://geocode.exemple.fr/search
+      MC_TILE_URL='https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=CLE_MAPTILER'
+      MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap'
+      MC_OSRM_URL='https://eu1.locationiq.com/v1/directions/driving?key=CLE_LOCATIONIQ'
+      MC_NOMINATIM_URL='https://eu1.locationiq.com/v1/search?key=CLE_LOCATIONIQ'
 
-Ces trois URL sont les seules à changer ; voir `lib/core/config/app_config.dart`.
+Ces URL sont les seules à changer ; voir `lib/core/config/app_config.dart`.
 
 ## 4. Premier build iOS — *Mac*
 

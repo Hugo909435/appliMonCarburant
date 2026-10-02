@@ -1079,8 +1079,8 @@ class _MapAttribution extends StatelessWidget {
         ),
         child: Text(
           ev
-              ? '© OpenStreetMap · IRVE data.gouv.fr'
-              : '© OpenStreetMap contributors',
+              ? '${AppConfig.tileAttribution} · IRVE data.gouv.fr'
+              : AppConfig.tileAttribution,
           style: const TextStyle(fontSize: 10.5, color: Colors.black87),
         ),
       ),

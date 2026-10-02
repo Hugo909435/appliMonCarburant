@@ -10,6 +10,7 @@
 #   MC_TILE_URL=https://tuiles.exemple.fr/{z}/{x}/{y}.png
 #   MC_OSRM_URL=https://osrm.exemple.fr/route/v1/driving
 #   MC_NOMINATIM_URL=https://geocode.exemple.fr/search
+#   MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap'   # facultatif
 #
 # Sans ce fichier, le build utiliserait les serveurs publics de démonstration
 # d'OpenStreetMap, dont les conditions interdisent le trafic d'une app
@@ -42,6 +43,9 @@ DEFINES=(
   --dart-define=MC_OSRM_URL="$MC_OSRM_URL"
   --dart-define=MC_NOMINATIM_URL="$MC_NOMINATIM_URL"
 )
+if [[ -n "${MC_TILE_ATTRIBUTION:-}" ]]; then
+  DEFINES+=(--dart-define=MC_TILE_ATTRIBUTION="$MC_TILE_ATTRIBUTION")
+fi
 
 echo "→ Rafraîchissement des enseignes depuis OpenStreetMap"
 dart run tool/build_station_brands.dart

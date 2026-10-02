@@ -454,7 +454,7 @@ class _RouteMap extends StatelessWidget {
               ),
               const RichAttributionWidget(
                 attributions: [
-                  TextSourceAttribution('© OpenStreetMap contributors'),
+                  TextSourceAttribution(AppConfig.tileAttribution),
                   TextSourceAttribution('Itinéraire OSRM'),
                 ],
               ),

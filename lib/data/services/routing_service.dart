@@ -25,7 +25,7 @@ class RoutingException implements Exception {
   String toString() => message;
 }
 
-/// Driving itinerary backed by OSRM (OpenStreetMap data, no API key).
+/// Driving itinerary from an OSRM-compatible API (OpenStreetMap data).
 ///
 /// The server is [AppConfig.osrmBaseUrl]; see that class for why the public
 /// demo instance it defaults to must not ship in a published build.
@@ -33,9 +33,11 @@ class RoutingService {
   static const _baseUrl = AppConfig.osrmBaseUrl;
 
   Future<RouteResult> route(RoutePoint from, RoutePoint to) async {
-    final uri = Uri.parse(
-      '$_baseUrl/${from.lng},${from.lat};${to.lng},${to.lat}',
-    ).replace(queryParameters: {'overview': 'full', 'geometries': 'geojson'});
+    final uri = AppConfig.endpoint(
+      _baseUrl,
+      path: '/${from.lng},${from.lat};${to.lng},${to.lat}',
+      query: {'overview': 'full', 'geometries': 'geojson'},
+    );
 
     final http.Response response;
     try {
