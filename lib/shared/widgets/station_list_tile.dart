@@ -113,7 +113,10 @@ class StationListTile extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PriceTotem(price: price, accentColor: fuel.color),
+                  if (station.isOutOfStock)
+                    const OutOfStockTotem()
+                  else
+                    PriceTotem(price: price, accentColor: fuel.color),
                   if (priceGap case final gap?) ...[
                     const SizedBox(height: 4),
                     PriceGapLabel(gap: gap),

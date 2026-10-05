@@ -40,12 +40,17 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
     final villeSlug = slugifyCity(ville);
     final adresse = _cleanText(pdv.getElement('adresse')?.innerText) ?? '';
 
-    // Ruptures de stock en cours (fin == "" => toujours en rupture).
+    // Ruptures de stock en cours (fin == "" => toujours en rupture). Les
+    // temporaires disent que la station vend ce carburant d'habitude ; les
+    // définitives, qu'elle a cessé de le vendre.
     final ruptures = <String>{};
+    final shortages = <String>[];
     for (final r in pdv.findElements('rupture')) {
       if ((r.getAttribute('fin') ?? '').isEmpty) {
         final nom = r.getAttribute('nom');
-        if (nom != null) ruptures.add(nom);
+        if (nom == null) continue;
+        ruptures.add(nom);
+        if (r.getAttribute('type') == 'temporaire') shortages.add(nom);
       }
     }
 
@@ -59,7 +64,10 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
       prices[nom] = double.parse(valeur.toStringAsFixed(3));
       priceUpdates[nom] = p.getAttribute('maj') ?? '';
     }
-    if (prices.isEmpty) continue;
+    // Sans aucun prix, la station n'est gardée que si elle est à sec pour
+    // l'instant : sans rupture temporaire, c'est une station fermée pour de
+    // bon ou qui ne déclare plus rien.
+    if (prices.isEmpty && shortages.isEmpty) continue;
 
     final services = <String>[];
     final servicesEl = pdv.getElement('services');
@@ -93,6 +101,7 @@ List<Map<String, dynamic>> parseGovFeed(Uint8List zipBytes) {
       'horaires': horaires,
       'automate': automate,
       'highway': highway,
+      'shortages': shortages,
     });
   }
 

@@ -600,7 +600,10 @@ class _StationMarkersLayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    var stations = ref.watch(brandFilteredStationsProvider);
+    var stations = [
+      ...ref.watch(brandFilteredStationsProvider),
+      ...ref.watch(outOfStockStationsProvider),
+    ];
     final fuel = ref.watch(selectedFuelProvider);
     final favoriteIds =
         ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
@@ -650,7 +653,8 @@ class _StationMarkersLayer extends ConsumerWidget {
               onTap: () => showStationSheet(context, station),
             )
           : _StationDot(
-              color: fuel.color,
+              color: station.isOutOfStock ? OutOfStockTotem.color : fuel.color,
+              greyed: station.isOutOfStock,
               brand: brands[station.id],
               isFavorite: favoriteIds.contains(station.id),
               onTap: () => showStationSheet(context, station),
@@ -689,6 +693,15 @@ class _StationMarkersLayer extends ConsumerWidget {
     );
   }
 }
+
+/// Désature un logo d'enseigne (luminance Rec. 709), pour les stations en
+/// rupture totale.
+const _greyscale = ColorFilter.matrix([
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0, 0, 0, 1, 0, //
+]);
 
 /// Comment [markerStations] dessine les stations qu'il retient.
 enum MarkerMode {
@@ -889,6 +902,7 @@ class _EvMarkersLayer extends ConsumerWidget {
 class _StationDot extends StatelessWidget {
   const _StationDot({
     required this.color,
+    this.greyed = false,
     required this.brand,
     required this.isFavorite,
     required this.onTap,
@@ -898,11 +912,18 @@ class _StationDot extends StatelessWidget {
   /// toutes les stations, elle rappelle le carburant comparé, pas l'enseigne.
   final Color color;
 
+  /// Station en rupture totale : logo désaturé, pour qu'elle se lise comme
+  /// indisponible même de loin.
+  final bool greyed;
+
   /// Enseigne de la station, ou `null` quand elle n'a pas pu être reconnue.
   final FuelBrand? brand;
 
   final bool isFavorite;
   final VoidCallback onTap;
+
+  Widget _maybeGreyed(Widget child) =>
+      greyed ? ColorFiltered(colorFilter: _greyscale, child: child) : child;
 
   @override
   Widget build(BuildContext context) {
@@ -942,10 +963,12 @@ class _StationDot extends StatelessWidget {
                     BoxShadow(color: Colors.black26, blurRadius: 2),
                   ],
                 ),
-                child: BrandLogo(
-                  brand: brand,
-                  size: _dotSize - 2 * _dotRingWidth,
-                  shape: BrandLogoShape.circle,
+                child: _maybeGreyed(
+                  BrandLogo(
+                    brand: brand,
+                    size: _dotSize - 2 * _dotRingWidth,
+                    shape: BrandLogoShape.circle,
+                  ),
                 ),
               ),
             ),
@@ -976,16 +999,24 @@ class _StationMarker extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          PriceTotem(
-            price: station.prices[fuel.code],
-            accentColor: fuel.color,
-            size: PriceTotemSize.compact,
-          ),
+          if (station.isOutOfStock)
+            const OutOfStockTotem()
+          else
+            PriceTotem(
+              price: station.prices[fuel.code],
+              accentColor: fuel.color,
+              size: PriceTotemSize.compact,
+            ),
           if (brand != null)
             Positioned(
               top: -8,
               right: 0,
-              child: BrandLogo(brand: brand!, size: 22),
+              child: station.isOutOfStock
+                  ? ColorFiltered(
+                      colorFilter: _greyscale,
+                      child: BrandLogo(brand: brand!, size: 22),
+                    )
+                  : BrandLogo(brand: brand!, size: 22),
             ),
           if (isFavorite)
             const Positioned(

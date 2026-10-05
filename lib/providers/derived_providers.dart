@@ -19,6 +19,37 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
   final allStations =
       ref.watch(stationsProvider).valueOrNull ?? const <Station>[];
   final fuel = ref.watch(selectedFuelProvider);
+  return _applyStationFilters(ref, [
+    for (final s in allStations)
+      if (s.prices.containsKey(fuel.code)) s,
+  ]);
+});
+
+/// [filteredStationsProvider] narrowed to the selected brand, if any — what
+/// the map actually shows. Kept apart from it because the brand picker
+/// needs the brands of every station the other filters let through.
+final brandFilteredStationsProvider = Provider<List<Station>>((ref) {
+  return _applyBrandFilter(ref, ref.watch(filteredStationsProvider));
+});
+
+/// Stations with no fuel at all on sale right now, under the same filters
+/// as [brandFilteredStationsProvider] except the fuel type, which they have
+/// none of. The map draws them greyed out; the list leaves them out, since
+/// it ranks by price.
+final outOfStockStationsProvider = Provider<List<Station>>((ref) {
+  final allStations =
+      ref.watch(stationsProvider).valueOrNull ?? const <Station>[];
+  return _applyBrandFilter(
+    ref,
+    _applyStationFilters(ref, [
+      for (final s in allStations)
+        if (s.isOutOfStock) s,
+    ]),
+  );
+});
+
+/// The highway, département, favorites-only and service filters.
+List<Station> _applyStationFilters(Ref ref, List<Station> stations) {
   final highwayFilter = ref.watch(highwayFilterProvider);
   final dep = ref.watch(departmentFilterProvider);
   final favoritesOnly = ref.watch(favoritesOnlyProvider);
@@ -26,9 +57,6 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
   final favoriteIds =
       ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
 
-  var stations = allStations
-      .where((s) => s.prices.containsKey(fuel.code))
-      .toList();
   if (highwayFilter == kAnyHighway) {
     stations = stations.where((s) => s.isAutoroute).toList();
   } else if (highwayFilter != null) {
@@ -44,18 +72,14 @@ final filteredStationsProvider = Provider<List<Station>>((ref) {
         .toList();
   }
   return stations;
-});
+}
 
-/// [filteredStationsProvider] narrowed to the selected brand, if any — what
-/// the map actually shows. Kept apart from it because the brand picker
-/// needs the brands of every station the other filters let through.
-final brandFilteredStationsProvider = Provider<List<Station>>((ref) {
-  final stations = ref.watch(filteredStationsProvider);
+List<Station> _applyBrandFilter(Ref ref, List<Station> stations) {
   final brand = ref.watch(selectedBrandProvider);
   if (brand == null) return stations;
   final brands = ref.watch(stationBrandsProvider).valueOrNull ?? const {};
   return stations.where((s) => brands[s.id]?.key == brand).toList();
-});
+}
 
 /// A station of the home list, with its distance to the user when known.
 typedef ListedStation = ({Station station, double? distanceKm});

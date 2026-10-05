@@ -64,6 +64,21 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
+		<!-- « Signaler un problème » : le message de l'utilisateur, envoyé par
+		     Formspree. L'e-mail facultatif qui l'accompagne est couvert par
+		     l'entrée EmailAddress ci-dessus. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCustomerSupport</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 		<!-- Rapports de plantage (Firebase Crashlytics). -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>

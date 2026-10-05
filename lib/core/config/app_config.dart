@@ -62,6 +62,12 @@ class AppConfig {
     defaultValue: _defaultNominatimUrl,
   );
 
+  /// Identifiant du formulaire Formspree de « Signaler un problème » (la fin
+  /// de son URL, `formspree.io/f/<id>`). Le service transfère les messages à
+  /// une adresse que l'app ne connaît pas, et qui reste donc cachée aux
+  /// utilisateurs. Vide : l'entrée n'est pas proposée.
+  static const feedbackFormId = String.fromEnvironment('MC_FEEDBACK_FORM');
+
   /// URL d'appel d'un service : [base] prolongée de [path], avec [query]
   /// ajoutée à la requête que [base] porte déjà (la clé d'API d'un
   /// fournisseur, typiquement) au lieu de la remplacer.

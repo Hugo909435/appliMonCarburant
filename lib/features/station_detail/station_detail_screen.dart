@@ -14,6 +14,7 @@ import '../../providers/stations_provider.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/fill_cost_card.dart';
 import '../../shared/widgets/price_totem.dart';
+import '../../shared/widgets/out_of_stock_card.dart';
 import '../../shared/widgets/settings_group.dart';
 import '../../shared/widgets/ad_slot.dart';
 
@@ -141,64 +142,68 @@ class StationDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 28),
           const SectionTitle('Prix des carburants'),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
-                children: [
-                  for (final fuel in FuelType.values)
-                    if (station.prices.containsKey(fuel.code)) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: fuel.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                fuel.label,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+          if (station.isOutOfStock)
+            OutOfStockCard(station: station)
+          else
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    for (final fuel in FuelType.values)
+                      if (station.prices.containsKey(fuel.code)) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: fuel.color,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            ),
-                            PriceTotem(
-                              price: station.prices[fuel.code],
-                              accentColor: fuel.color,
-                            ),
-                          ],
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  fuel.label,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              PriceTotem(
+                                price: station.prices[fuel.code],
+                                accentColor: fuel.color,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      if (fuel !=
-                          FuelType.values.lastWhere(
-                            (f) => station.prices.containsKey(f.code),
-                          ))
-                        const Divider(height: 1, indent: 34, endIndent: 16),
-                    ],
-                ],
+                        if (fuel !=
+                            FuelType.values.lastWhere(
+                              (f) => station.prices.containsKey(f.code),
+                            ))
+                          const Divider(height: 1, indent: 34, endIndent: 16),
+                      ],
+                  ],
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
-            child: Text(
-              'Dernière mise à jour : ${formatRelativeDate(station.lastUpdate)}',
-              style: TextStyle(
-                color: onSurface.withValues(alpha: 0.5),
-                fontSize: 12,
+          if (!station.isOutOfStock)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4),
+              child: Text(
+                'Dernière mise à jour : ${formatRelativeDate(station.lastUpdate)}',
+                style: TextStyle(
+                  color: onSurface.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
               ),
             ),
-          ),
           if (distance != null) ...[
             const SizedBox(height: 12),
             FillCostCard(station: station, distanceKm: distance),

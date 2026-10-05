@@ -34,6 +34,7 @@ void main() {
       'Cartes et itinéraires',
       'Compte et favoris',
       'Rapports de plantage',
+      'Signalement d’un problème',
       'Vos droits',
     ]) {
       final finder = find.text(section);

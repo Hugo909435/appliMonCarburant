@@ -95,3 +95,39 @@ class PriceTotem extends StatelessWidget {
     );
   }
 }
+
+/// Stand-in for [PriceTotem] at a station with no fuel on sale: the same
+/// plate, greyed out, reading "En rupture" instead of a price.
+class OutOfStockTotem extends StatelessWidget {
+  const OutOfStockTotem({super.key, this.size = PriceTotemSize.compact});
+
+  final PriceTotemSize size;
+
+  /// Plate colour, also used for the map dot of such a station.
+  static const color = Color(0xFF8A949B);
+
+  @override
+  Widget build(BuildContext context) {
+    final (hPad, vPad, radius, fontSize) = switch (size) {
+      PriceTotemSize.compact => (10.0, 8.0, AppRadius.sm, 12.5),
+      PriceTotemSize.large => (16.0, 13.0, AppRadius.md, 20.0),
+      PriceTotemSize.giant => (22.0, 19.0, AppRadius.lg, 32.0),
+    };
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Text(
+        'En rupture',
+        style: GoogleFonts.archivo(
+          color: Colors.white,
+          fontSize: fontSize,
+          height: 1,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}

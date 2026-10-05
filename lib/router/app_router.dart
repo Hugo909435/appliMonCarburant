@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/account/account_screen.dart';
 import '../features/compare/compare_screen.dart';
 import '../features/favorites/favorites_screen.dart';
+import '../features/feedback/report_problem_screen.dart';
 import '../features/groups/autoroutes_list_screen.dart';
 import '../features/groups/departments_list_screen.dart';
 import '../features/groups/group_detail_screen.dart';
@@ -71,6 +72,11 @@ final _routes = <RouteBase>[
     parentNavigatorKey: _rootNavigatorKey,
     path: '/confidentialite',
     builder: (context, state) => const PrivacyScreen(),
+  ),
+  GoRoute(
+    parentNavigatorKey: _rootNavigatorKey,
+    path: '/signaler',
+    builder: (context, state) => const ReportProblemScreen(),
   ),
   GoRoute(
     parentNavigatorKey: _rootNavigatorKey,

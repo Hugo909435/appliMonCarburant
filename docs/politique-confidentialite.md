@@ -1,6 +1,6 @@
 # Politique de confidentialité — Mon Carburant
 
-*Dernière mise à jour : septembre 2026.*
+*Dernière mise à jour : octobre 2026.*
 
 > Ce texte est la version à publier sur le web : App Store Connect en exige
 > l'URL. Il doit rester le miroir exact de l'écran affiché dans l'app
@@ -57,6 +57,13 @@ ni vos favoris, ni votre identité, et servent uniquement à corriger les bugs.
 
 La consommation et la taille du réservoir que vous saisissez restent sur votre
 appareil.
+
+## Signalement d'un problème
+
+Si vous signalez un problème depuis l'écran Compte, votre message, la version
+de l'app et, si vous la donnez, votre adresse e-mail sont transmis par le
+service Formspree, qui nous les envoie par e-mail. Votre adresse ne sert qu'à
+vous répondre.
 
 ## Vos droits
 

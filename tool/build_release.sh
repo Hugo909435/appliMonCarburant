@@ -11,6 +11,7 @@
 #   MC_OSRM_URL=https://osrm.exemple.fr/route/v1/driving
 #   MC_NOMINATIM_URL=https://geocode.exemple.fr/search
 #   MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap'   # facultatif
+#   MC_FEEDBACK_FORM=...   # id Formspree de « Signaler un problème » (facultatif)
 #
 # Sans ce fichier, le build utiliserait les serveurs publics de démonstration
 # d'OpenStreetMap, dont les conditions interdisent le trafic d'une app
@@ -45,6 +46,11 @@ DEFINES=(
 )
 if [[ -n "${MC_TILE_ATTRIBUTION:-}" ]]; then
   DEFINES+=(--dart-define=MC_TILE_ATTRIBUTION="$MC_TILE_ATTRIBUTION")
+fi
+if [[ -n "${MC_FEEDBACK_FORM:-}" ]]; then
+  DEFINES+=(--dart-define=MC_FEEDBACK_FORM="$MC_FEEDBACK_FORM")
+else
+  echo "⚠ MC_FEEDBACK_FORM absent : pas de « Signaler un problème » dans ce build." >&2
 fi
 
 echo "→ Rafraîchissement des enseignes depuis OpenStreetMap"

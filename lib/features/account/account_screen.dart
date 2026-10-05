@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../../core/config/app_config.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/notification_service.dart';
 import '../../providers/app_info_provider.dart';
@@ -110,6 +111,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                 subtitle: 'Données collectées et vos droits',
                 onTap: () => context.push('/confidentialite'),
               ),
+              if (AppConfig.feedbackFormId.isNotEmpty)
+                SettingsTile(
+                  icon: Icons.bug_report_outlined,
+                  title: 'Signaler un problème',
+                  subtitle: 'Station manquante, prix faux, bug…',
+                  onTap: () => context.push('/signaler'),
+                ),
             ],
           ),
           const SizedBox(height: 24),

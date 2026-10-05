@@ -33,7 +33,7 @@ class PrivacyScreen extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 16),
           Text(
-            'Dernière mise à jour : septembre 2026.\n'
+            'Dernière mise à jour : octobre 2026.\n'
             'Questions ou demande de suppression : contact@mon-carburant.com',
             style: theme.textTheme.bodySmall,
           ),
@@ -91,6 +91,13 @@ const _sections = [
         'l’état du code au moment de l’erreur. Ces rapports ne contiennent ni '
         'votre position, ni vos favoris, ni votre identité, et servent '
         'uniquement à corriger les bugs.',
+  ),
+  _Section(
+    'Signalement d’un problème',
+    "Si vous signalez un problème depuis l’écran Compte, votre message, la "
+        'version de l’app et, si vous la donnez, votre adresse e-mail sont '
+        'transmis par le service Formspree, qui nous les envoie par e-mail. '
+        'Votre adresse ne sert qu’à vous répondre.',
   ),
   _Section(
     'Vos droits',

@@ -20,6 +20,7 @@ class Station {
     required this.horaires,
     required this.automate,
     this.highway,
+    this.shortages = const [],
   });
 
   final String id;
@@ -49,7 +50,14 @@ class Station {
   /// Highway code extracted from the address (e.g. "A6"), only for pop == 'autoroute'.
   final String? highway;
 
+  /// Fuel codes the station reports as temporarily out of stock.
+  final List<String> shortages;
+
   bool get isAutoroute => pop == 'autoroute';
+
+  /// No fuel on sale: every one it sells is out of stock. Kept on the map,
+  /// greyed out, so that a station people know isn't simply missing.
+  bool get isOutOfStock => prices.isEmpty;
 
   DateTime? get lastUpdate {
     final dates = priceUpdates.values.where((d) => d.isNotEmpty).toList();
@@ -89,6 +97,7 @@ class Station {
     'horaires': horaires,
     'automate': automate,
     'highway': highway,
+    'shortages': shortages,
   };
 
   factory Station.fromJson(Map<String, dynamic> json) => Station(
@@ -110,5 +119,6 @@ class Station {
     horaires: (json['horaires'] as List?)?.map((e) => e as String?).toList(),
     automate: json['automate'] as bool,
     highway: json['highway'] as String?,
+    shortages: List<String>.from(json['shortages'] as List? ?? const []),
   );
 }
