@@ -54,7 +54,11 @@ else
 fi
 
 echo "→ Rafraîchissement des enseignes depuis OpenStreetMap"
-dart run tool/build_station_brands.dart
+# Les serveurs Overpass saturent souvent (504). Les enseignes changent peu :
+# on garde alors la liste déjà versionnée plutôt que de bloquer le build.
+if ! dart run tool/build_station_brands.dart; then
+  echo "⚠ Enseignes non rafraîchies : la liste existante est conservée." >&2
+fi
 
 echo "→ Analyse et tests"
 flutter analyze
