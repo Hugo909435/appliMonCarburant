@@ -2,22 +2,25 @@ import 'package:flutter/foundation.dart';
 
 /// Points de terminaison réseau, surchargeables au build.
 ///
-/// Le fond de carte est vectoriel, servi par OpenFreeMap ([mapStyleUrl]),
-/// utilisable tel quel en production. Itinéraire et géocodage pointent par
-/// défaut sur les serveurs publics de démonstration d'OpenStreetMap : ils
-/// conviennent au développement, mais le serveur de démo d'OSRM n'accepte
-/// aucun usage soutenu, et Nominatim pas davantage celui d'une app publiée.
+/// Les valeurs par défaut sont les serveurs publics de démonstration
+/// d'OpenStreetMap. Elles conviennent au développement, mais leurs conditions
+/// d'utilisation interdisent le trafic d'une app publiée : la fondation OSM
+/// demande qu'une application n'utilise pas `tile.openstreetmap.org` comme
+/// fond de carte, et le serveur de démo d'OSRM n'accepte aucun usage soutenu.
 ///
-/// Avant publication, pointer vers un fournisseur compatible :
+/// Avant publication, pointer vers des fournisseurs (offres gratuites à
+/// usage commercial permis) :
 ///
 /// ```bash
 /// flutter build ipa \
+///   --dart-define=MC_TILE_URL='https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}{r}.png?apiKey=CLE' \
+///   --dart-define=MC_TILE_ATTRIBUTION='Powered by Geoapify © OpenStreetMap' \
 ///   --dart-define=MC_OSRM_URL='https://eu1.locationiq.com/v1/directions/driving?key=CLE' \
 ///   --dart-define=MC_NOMINATIM_URL='https://eu1.locationiq.com/v1/search?key=CLE'
 /// ```
 ///
-/// Les fournisseurs commerciaux passent leur clé dans l'URL : les services
-/// conservent la requête de l'URL de base (voir [endpoint]).
+/// Les fournisseurs passent leur clé dans l'URL : les services conservent la
+/// requête de l'URL de base (voir [endpoint]).
 ///
 /// `tool/build_release.sh` regroupe ces options ; [usesPublicDemoServices]
 /// permet de vérifier, à l'exécution, qu'un build de production ne les a pas
@@ -30,32 +33,22 @@ class AppConfig {
   static const _defaultNominatimUrl =
       'https://nominatim.openstreetmap.org/search';
 
-  /// Style du fond de carte vectoriel. OpenFreeMap : gratuit, sans clé ni
-  /// quota, usage commercial permis — en échange de son crédit sur la carte.
-  static const mapStyleUrl = String.fromEnvironment(
-    'MC_MAP_STYLE',
-    defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
-  );
+  static const _defaultTileUrl =
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-  /// Gabarit d'URL de tuiles raster. Vide par défaut : la carte est alors
-  /// vectorielle ([mapStyleUrl]). Renseigné, il la remplace — pour revenir
-  /// à un fournisseur raster sans toucher au code.
-  static const tileUrlTemplate = String.fromEnvironment('MC_TILE_URL');
-
-  /// Vrai quand le fond de carte est vectoriel plutôt que raster.
-  static const usesVectorMap = tileUrlTemplate == '';
-
-  static const _tileAttributionOverride = String.fromEnvironment(
-    'MC_TILE_ATTRIBUTION',
+  /// Gabarit d'URL des tuiles raster du fond de carte. `{r}` y est remplacé
+  /// par `@2x` sur les écrans haute densité, quand le fournisseur en sert.
+  static const tileUrlTemplate = String.fromEnvironment(
+    'MC_TILE_URL',
+    defaultValue: _defaultTileUrl,
   );
 
   /// Crédit affiché sur la carte. Le fournisseur de tuiles impose d'y
   /// figurer à côté d'OpenStreetMap.
-  static const tileAttribution = _tileAttributionOverride != ''
-      ? _tileAttributionOverride
-      : usesVectorMap
-      ? 'OpenFreeMap © OpenMapTiles © OpenStreetMap'
-      : '© OpenStreetMap contributors';
+  static const tileAttribution = String.fromEnvironment(
+    'MC_TILE_ATTRIBUTION',
+    defaultValue: '© OpenStreetMap contributors',
+  );
 
   /// Racine du service d'itinéraire (API OSRM v1).
   static const osrmBaseUrl = String.fromEnvironment(
@@ -111,6 +104,7 @@ class AppConfig {
   /// Vrai tant qu'au moins un service pointe encore sur un serveur public de
   /// démonstration. Sert de garde-fou avant publication.
   static bool get usesPublicDemoServices =>
+      tileUrlTemplate == _defaultTileUrl ||
       osrmBaseUrl == _defaultOsrmUrl ||
       nominatimBaseUrl == _defaultNominatimUrl;
 

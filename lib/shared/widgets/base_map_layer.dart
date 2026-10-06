@@ -1,64 +1,50 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart';
 
 import '../../core/config/app_config.dart';
 
-/// The vector map style, read once (style JSON, tile source, sprites) and
-/// shared by every map of the app.
-final mapStyleProvider = FutureProvider<Style>(
-  (ref) => StyleReader(uri: AppConfig.mapStyleUrl).read(),
-);
+/// Fond affiché là où une tuile n'est pas encore arrivée : la couleur des
+/// terres de la carte plutôt que le gris par défaut de flutter_map, pour
+/// qu'une tuile en retard ne fasse pas un trou.
+const kMapBackground = Color(0xFFF2EFE9);
 
-/// The map's background: OpenFreeMap vector tiles, or raster tiles when
-/// [AppConfig.tileUrlTemplate] is set. Goes in a [FlutterMap]'s children,
-/// below the markers.
-class BaseMapLayer extends ConsumerStatefulWidget {
+/// The map's background: raster tiles from [AppConfig.tileUrlTemplate],
+/// kept on disk so an area already seen shows at once, offline included,
+/// and doesn't count again against the provider's quota. Goes in a
+/// [FlutterMap]'s children, below the markers.
+class BaseMapLayer extends StatelessWidget {
   const BaseMapLayer({super.key});
 
   @override
-  ConsumerState<BaseMapLayer> createState() => _BaseMapLayerState();
+  Widget build(BuildContext context) {
+    return TileLayer(
+      urlTemplate: AppConfig.tileUrlTemplate,
+      userAgentPackageName: AppConfig.packageName,
+      tileProvider: _CachedTileProvider(),
+      // Tuiles @2x sur les écrans haute densité, si le gabarit les prévoit :
+      // une carte nette pour le même nombre de requêtes.
+      retinaMode:
+          AppConfig.tileUrlTemplate.contains('{r}') &&
+          RetinaMode.isHighDensity(context),
+      // Une couronne de tuiles chargée autour de l'écran, et davantage
+      // gardée en mémoire : moins de bords gris en faisant glisser la carte
+      // ou en revenant sur ses pas.
+      panBuffer: 1,
+      keepBuffer: 4,
+    );
+  }
 }
 
-class _BaseMapLayerState extends ConsumerState<BaseMapLayer> {
-  late final AppLifecycleListener _lifecycle;
+class _CachedTileProvider extends TileProvider {
+  // Map modifiable : TileLayer y ajoute son en-tête User-Agent, tiré de
+  // userAgentPackageName.
+  _CachedTileProvider() : super(headers: {});
 
   @override
-  void initState() {
-    super.initState();
-    // Le style n'a pas pu être lu (lancement hors ligne, par exemple) :
-    // nouvel essai au retour dans l'app, plutôt qu'une carte vide jusqu'au
-    // prochain redémarrage.
-    _lifecycle = AppLifecycleListener(
-      onResume: () {
-        if (ref.read(mapStyleProvider).hasError) {
-          ref.invalidate(mapStyleProvider);
-        }
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _lifecycle.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!AppConfig.usesVectorMap) {
-      return TileLayer(
-        urlTemplate: AppConfig.tileUrlTemplate,
-        userAgentPackageName: AppConfig.packageName,
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
+      CachedNetworkImageProvider(
+        getTileUrl(coordinates, options),
+        headers: headers,
       );
-    }
-    final style = ref.watch(mapStyleProvider).valueOrNull;
-    if (style == null) return const SizedBox.shrink();
-    return VectorTileLayer(
-      theme: style.theme,
-      sprites: style.sprites,
-      tileProviders: style.providers,
-    );
-  }
 }

@@ -394,6 +394,7 @@ class _RouteMap extends StatelessWidget {
             // applies on first build.
             key: ValueKey(route),
             options: MapOptions(
+              backgroundColor: kMapBackground,
               // Départ et arrivée confondus : OSRM renvoie deux fois le même
               // point, des bornes de taille nulle, et un cadrage à zoom infini
               // qui fait planter les tuiles. On centre alors simplement.

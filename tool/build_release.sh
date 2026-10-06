@@ -7,10 +7,10 @@
 #
 # Les URL se lisent dans tool/.env.release, un fichier local non versionné :
 #
+#   MC_TILE_URL=https://tuiles.exemple.fr/{z}/{x}/{y}{r}.png
 #   MC_OSRM_URL=https://osrm.exemple.fr/route/v1/driving
 #   MC_NOMINATIM_URL=https://geocode.exemple.fr/search
-#   MC_TILE_URL=https://tuiles.exemple.fr/{z}/{x}/{y}.png   # facultatif : raster au lieu d'OpenFreeMap
-#   MC_TILE_ATTRIBUTION='© Fournisseur © OpenStreetMap'      # avec MC_TILE_URL
+#   MC_TILE_ATTRIBUTION='© Fournisseur © OpenStreetMap'   # facultatif
 #   MC_FEEDBACK_FORM=...   # id Formspree de « Signaler un problème » (facultatif)
 #
 # Sans ce fichier, le build utiliserait les serveurs publics de démonstration
@@ -32,7 +32,7 @@ fi
 # shellcheck disable=SC1090
 set -a; source "$ENV_FILE"; set +a
 
-for var in MC_OSRM_URL MC_NOMINATIM_URL; do
+for var in MC_TILE_URL MC_OSRM_URL MC_NOMINATIM_URL; do
   if [[ -z "${!var:-}" ]]; then
     echo "✗ $var non défini dans $ENV_FILE." >&2
     exit 1
@@ -40,14 +40,10 @@ for var in MC_OSRM_URL MC_NOMINATIM_URL; do
 done
 
 DEFINES=(
+  --dart-define=MC_TILE_URL="$MC_TILE_URL"
   --dart-define=MC_OSRM_URL="$MC_OSRM_URL"
   --dart-define=MC_NOMINATIM_URL="$MC_NOMINATIM_URL"
 )
-# Fond de carte : vectoriel OpenFreeMap par défaut ; MC_TILE_URL le remplace
-# par des tuiles raster.
-if [[ -n "${MC_TILE_URL:-}" ]]; then
-  DEFINES+=(--dart-define=MC_TILE_URL="$MC_TILE_URL")
-fi
 if [[ -n "${MC_TILE_ATTRIBUTION:-}" ]]; then
   DEFINES+=(--dart-define=MC_TILE_ATTRIBUTION="$MC_TILE_ATTRIBUTION")
 fi

@@ -279,6 +279,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
+                backgroundColor: kMapBackground,
                 initialCenter: position != null
                     ? ll.LatLng(position.latitude, position.longitude)
                     : HomeScreen._franceCenter,
