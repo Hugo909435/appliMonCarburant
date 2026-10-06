@@ -47,20 +47,23 @@ n'utilise pas `tile.openstreetmap.org` comme fond de carte, et le serveur de
 démo d'OSRM n'accepte aucun usage soutenu. Une app qui les garderait se ferait
 bloquer, et la carte deviendrait grise chez tout le monde en même temps.
 
-- [ ] Choisir un fournisseur de tuiles (offre gratuite généralement suffisante
-      pour un lancement : MapTiler, Stadia Maps, Thunderforest…) ou héberger
-      son propre serveur.
-- [ ] Faire de même pour le routage (OSRM auto-hébergé, ou une API commerciale)
+- [x] Fournisseur de tuiles : **Geoapify** (offre gratuite, usage commercial
+      permis, ~12 000 tuiles/jour). Écartés : MapTiler et Stadia (offres
+      gratuites non commerciales), OpenFreeMap (vectoriel, trop saccadé dans
+      l'app).
+- [x] Faire de même pour le routage — **LocationIQ**, gratuit avec le lien
+      « Search by LocationIQ.com » affiché dans l'app — pour le routage (OSRM auto-hébergé, ou une API commerciale)
       et le géocodage (Nominatim auto-hébergé, ou l'API Adresse de
       data.gouv.fr, gratuite et sans quota strict pour la France).
-- [ ] Créer `tool/.env.release` (non versionné). Exemple avec MapTiler pour
-      les tuiles et LocationIQ (API compatibles OSRM et Nominatim) pour le
-      reste — la clé d'API reste dans l'URL :
+- [x] Créer `tool/.env.release` (non versionné). Geoapify pour les tuiles et
+      LocationIQ (API compatibles OSRM et Nominatim) pour le reste — la clé
+      d'API reste dans l'URL :
 
-      MC_TILE_URL='https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=CLE_MAPTILER'
-      MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap'
+      MC_TILE_URL='https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}{r}.png?apiKey=CLE_GEOAPIFY'
+      MC_TILE_ATTRIBUTION='Powered by Geoapify © OpenStreetMap'
       MC_OSRM_URL='https://eu1.locationiq.com/v1/directions/driving?key=CLE_LOCATIONIQ'
       MC_NOMINATIM_URL='https://eu1.locationiq.com/v1/search?key=CLE_LOCATIONIQ'
+      MC_FEEDBACK_FORM='identifiant Formspree'
 
 Ces URL sont les seules à changer ; voir `lib/core/config/app_config.dart`.
 
@@ -137,6 +140,7 @@ id("com.google.firebase.crashlytics")
       | Identifiant         | Oui               | Non   | Fonctionnement     |
       | Adresse e-mail      | Oui               | Non   | Fonctionnement     |
       | Données de plantage | Non               | Non   | Fonctionnement     |
+      | Assistance client   | Non               | Non   | Fonctionnement     |
 
 - [ ] **Captures d'écran**, obligatoires pour deux tailles seulement :
       iPhone 6,9" (1320 × 2868) et iPhone 6,5" (1242 × 2688). Les tailles

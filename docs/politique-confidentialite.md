@@ -28,7 +28,7 @@ quelle station vous consultez.
 ## Cartes et itinéraires
 
 L'affichage de la carte, la recherche d'adresse et le calcul d'un trajet
-passent par des prestataires cartographiques (MapTiler, LocationIQ), à partir
+passent par des prestataires cartographiques (Geoapify, LocationIQ), à partir
 des données OpenStreetMap. Ils reçoivent, le temps de la requête, votre adresse IP ainsi que la zone affichée, le texte recherché ou
 les points de départ et d'arrivée. Aucun identifiant de compte ne leur est
 transmis.
