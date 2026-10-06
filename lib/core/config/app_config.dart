@@ -2,21 +2,16 @@ import 'package:flutter/foundation.dart';
 
 /// Points de terminaison réseau, surchargeables au build.
 ///
-/// Les valeurs par défaut sont les serveurs publics de démonstration
-/// d'OpenStreetMap. Elles conviennent au développement, mais leurs conditions
-/// d'utilisation interdisent le trafic d'une app publiée : la fondation OSM
-/// demande explicitement qu'une application n'utilise pas `tile.openstreetmap.org`
-/// comme fond de carte par défaut, et le serveur de démo d'OSRM n'accepte
-/// aucun usage soutenu. Une app qui les garderait se ferait bloquer, et la
-/// carte deviendrait grise chez tous les utilisateurs en même temps.
+/// Le fond de carte est vectoriel, servi par OpenFreeMap ([mapStyleUrl]),
+/// utilisable tel quel en production. Itinéraire et géocodage pointent par
+/// défaut sur les serveurs publics de démonstration d'OpenStreetMap : ils
+/// conviennent au développement, mais le serveur de démo d'OSRM n'accepte
+/// aucun usage soutenu, et Nominatim pas davantage celui d'une app publiée.
 ///
-/// Avant publication, pointer vers une infrastructure à soi ou un fournisseur
-/// commercial :
+/// Avant publication, pointer vers un fournisseur compatible :
 ///
 /// ```bash
 /// flutter build ipa \
-///   --dart-define=MC_TILE_URL='https://api.maptiler.com/maps/streets-v4/256/{z}/{x}/{y}.png?key=CLE' \
-///   --dart-define=MC_TILE_ATTRIBUTION='© MapTiler © OpenStreetMap' \
 ///   --dart-define=MC_OSRM_URL='https://eu1.locationiq.com/v1/directions/driving?key=CLE' \
 ///   --dart-define=MC_NOMINATIM_URL='https://eu1.locationiq.com/v1/search?key=CLE'
 /// ```
@@ -30,25 +25,37 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   const AppConfig._();
 
-  static const _defaultTileUrl =
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const _defaultOsrmUrl =
       'https://router.project-osrm.org/route/v1/driving';
   static const _defaultNominatimUrl =
       'https://nominatim.openstreetmap.org/search';
 
-  /// Gabarit d'URL des tuiles de la carte.
-  static const tileUrlTemplate = String.fromEnvironment(
-    'MC_TILE_URL',
-    defaultValue: _defaultTileUrl,
+  /// Style du fond de carte vectoriel. OpenFreeMap : gratuit, sans clé ni
+  /// quota, usage commercial permis — en échange de son crédit sur la carte.
+  static const mapStyleUrl = String.fromEnvironment(
+    'MC_MAP_STYLE',
+    defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
   );
 
-  /// Crédit affiché sur la carte. Le fournisseur de tuiles impose souvent
-  /// d'y figurer à côté d'OpenStreetMap.
-  static const tileAttribution = String.fromEnvironment(
+  /// Gabarit d'URL de tuiles raster. Vide par défaut : la carte est alors
+  /// vectorielle ([mapStyleUrl]). Renseigné, il la remplace — pour revenir
+  /// à un fournisseur raster sans toucher au code.
+  static const tileUrlTemplate = String.fromEnvironment('MC_TILE_URL');
+
+  /// Vrai quand le fond de carte est vectoriel plutôt que raster.
+  static const usesVectorMap = tileUrlTemplate == '';
+
+  static const _tileAttributionOverride = String.fromEnvironment(
     'MC_TILE_ATTRIBUTION',
-    defaultValue: '© OpenStreetMap contributors',
   );
+
+  /// Crédit affiché sur la carte. Le fournisseur de tuiles impose d'y
+  /// figurer à côté d'OpenStreetMap.
+  static const tileAttribution = _tileAttributionOverride != ''
+      ? _tileAttributionOverride
+      : usesVectorMap
+      ? 'OpenFreeMap © OpenMapTiles © OpenStreetMap'
+      : '© OpenStreetMap contributors';
 
   /// Racine du service d'itinéraire (API OSRM v1).
   static const osrmBaseUrl = String.fromEnvironment(
@@ -97,10 +104,13 @@ class AppConfig {
   static const userAgent =
       'MonCarburant/1.0 (+https://mon-carburant.com; contact@mon-carburant.com)';
 
+  /// Géocodage servi par LocationIQ, dont l'offre gratuite exige un lien
+  /// « Search by LocationIQ.com » visible près des résultats.
+  static bool get usesLocationIq => nominatimBaseUrl.contains('locationiq.com');
+
   /// Vrai tant qu'au moins un service pointe encore sur un serveur public de
   /// démonstration. Sert de garde-fou avant publication.
   static bool get usesPublicDemoServices =>
-      tileUrlTemplate == _defaultTileUrl ||
       osrmBaseUrl == _defaultOsrmUrl ||
       nominatimBaseUrl == _defaultNominatimUrl;
 

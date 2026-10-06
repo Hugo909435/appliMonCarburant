@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/widgets/geocoder_credit.dart';
 import '../../data/services/geocoding_service.dart';
 import '../../providers/map_search_provider.dart';
 
@@ -160,6 +161,7 @@ class _PlacePickerState extends ConsumerState<_PlacePicker> {
                         ),
                       ),
                     ),
+                  if (_results.isNotEmpty) const GeocoderCredit(),
                 ],
               ),
             ),

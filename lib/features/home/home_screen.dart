@@ -24,7 +24,9 @@ import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/map_viewport_provider.dart';
 import '../../providers/station_brands_provider.dart';
+import '../../shared/widgets/base_map_layer.dart';
 import '../../shared/widgets/brand_logo.dart';
+import '../../shared/widgets/geocoder_credit.dart';
 import '../../shared/widgets/price_totem.dart';
 import '../../shared/widgets/promo_banner.dart';
 import '../../shared/widgets/station_sheet.dart';
@@ -298,10 +300,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onMapReady: () => _publishCamera(_mapController.camera),
               ),
               children: [
-                TileLayer(
-                  urlTemplate: AppConfig.tileUrlTemplate,
-                  userAgentPackageName: AppConfig.packageName,
-                ),
+                const BaseMapLayer(),
                 if (layer == MapLayer.stations)
                   const _StationMarkersLayer()
                 else if (layer == MapLayer.bornes)
@@ -1470,44 +1469,47 @@ class _SearchResultsList extends StatelessWidget {
         color: Colors.white,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 280),
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            itemCount: results.length,
-            separatorBuilder: (_, _) => Divider(
-              height: 1,
-              indent: 56,
-              color: AppColors.primary.withValues(alpha: 0.08),
-            ),
-            itemBuilder: (context, index) {
-              final result = results[index];
-              final isStation = result.kind == SearchHitKind.station;
-              return ListTile(
-                iconColor: AppColors.primary,
-                textColor: AppColors.primary,
-                subtitleTextStyle: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.primary.withValues(alpha: 0.6)),
-                leading: Icon(
-                  isStation
-                      ? Icons.local_gas_station_rounded
-                      : Icons.place_outlined,
-                ),
-                title: Text(
-                  result.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  result.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () => onSelect(result),
-              );
-            },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: _list(context)),
+              if (results.any((r) => r.kind != SearchHitKind.station))
+                GeocoderCredit(color: AppColors.primary.withValues(alpha: 0.6)),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _list(BuildContext context) => ListView.separated(
+    shrinkWrap: true,
+    padding: EdgeInsets.zero,
+    itemCount: results.length,
+    separatorBuilder: (_, _) => Divider(
+      height: 1,
+      indent: 56,
+      color: AppColors.primary.withValues(alpha: 0.08),
+    ),
+    itemBuilder: (context, index) {
+      final result = results[index];
+      final isStation = result.kind == SearchHitKind.station;
+      return ListTile(
+        iconColor: AppColors.primary,
+        textColor: AppColors.primary,
+        subtitleTextStyle: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: AppColors.primary.withValues(alpha: 0.6)),
+        leading: Icon(
+          isStation ? Icons.local_gas_station_rounded : Icons.place_outlined,
+        ),
+        title: Text(result.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          result.subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: () => onSelect(result),
+      );
+    },
+  );
 }

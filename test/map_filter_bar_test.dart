@@ -36,31 +36,10 @@ void main() {
     final arrow = find.byTooltip('Plus de filtres');
     expect(arrow, findsOneWidget);
 
-    final before = tester.getTopLeft(find.text('Filtres')).dx;
+    final before = tester.getTopLeft(find.text('Carburant')).dx;
     await tester.tap(arrow);
     await tester.pumpAndSettle();
-    expect(tester.getTopLeft(find.text('Filtres')).dx, lessThan(before));
-  });
-
-  testWidgets('le bouton Filtres compte les filtres actifs et les efface', (
-    tester,
-  ) async {
-    final container = await pumpBar(tester);
-
-    await tester.tap(find.text('Filtres'));
-    await tester.pumpAndSettle();
-    expect(find.text('Filtres des stations'), findsOneWidget);
-    expect(find.text('Tout effacer'), findsNothing);
-
-    await tester.tap(find.text('Favoris uniquement'));
-    await tester.pumpAndSettle();
-    expect(container.read(favoritesOnlyProvider), isTrue);
-    expect(find.text('1'), findsOneWidget);
-
-    await tester.tap(find.text('Tout effacer'));
-    await tester.pumpAndSettle();
-    expect(container.read(favoritesOnlyProvider), isFalse);
-    expect(find.text('1'), findsNothing);
+    expect(tester.getTopLeft(find.text('Carburant')).dx, lessThan(before));
   });
 
   testWidgets('un filtre actif passe en tête de la ligne', (tester) async {

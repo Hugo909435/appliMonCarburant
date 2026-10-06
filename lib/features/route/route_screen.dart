@@ -15,6 +15,7 @@ import '../../providers/routing_provider.dart';
 import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/stations_provider.dart';
+import '../../shared/widgets/base_map_layer.dart';
 import '../../shared/widgets/fuel_selector.dart';
 import '../../shared/widgets/station_list_tile.dart';
 import '../../shared/widgets/station_sheet.dart';
@@ -413,10 +414,7 @@ class _RouteMap extends StatelessWidget {
               ),
             ),
             children: [
-              TileLayer(
-                urlTemplate: AppConfig.tileUrlTemplate,
-                userAgentPackageName: AppConfig.packageName,
-              ),
+              const BaseMapLayer(),
               PolylineLayer(
                 polylines: [
                   Polyline(
@@ -452,10 +450,14 @@ class _RouteMap extends StatelessWidget {
                     ),
                 ],
               ),
-              const RichAttributionWidget(
+              RichAttributionWidget(
                 attributions: [
-                  TextSourceAttribution(AppConfig.tileAttribution),
-                  TextSourceAttribution('Itinéraire OSRM'),
+                  const TextSourceAttribution(AppConfig.tileAttribution),
+                  TextSourceAttribution(
+                    AppConfig.usesLocationIq
+                        ? 'Itinéraire LocationIQ.com'
+                        : 'Itinéraire OSRM',
+                  ),
                 ],
               ),
             ],
