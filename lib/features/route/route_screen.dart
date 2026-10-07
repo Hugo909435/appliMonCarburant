@@ -179,8 +179,9 @@ class _RouteScreenState extends ConsumerState<RouteScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 children: [
-                  const Text('Écart max. avec la route'),
-                  const Spacer(),
+                  // Sur deux lignes plutôt que de pousser les choix hors
+                  // d'un écran étroit.
+                  const Expanded(child: Text('Écart max. avec la route')),
                   for (final km in const [1.0, 2.0, 5.0])
                     Padding(
                       padding: const EdgeInsets.only(left: 6),
