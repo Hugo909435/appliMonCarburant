@@ -14,6 +14,7 @@ import '../../data/services/notification_service.dart';
 import '../../providers/app_info_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/price_alerts_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../shared/widgets/settings_group.dart';
 import '../favorites/widgets/google_signin_web_button.dart';
 
@@ -105,6 +106,16 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           SettingsGroup(
             children: [
               if (NotificationService.isSupported) const _PriceAlertsTile(),
+              SettingsTile(
+                icon: Icons.school_outlined,
+                title: 'Tutoriel',
+                subtitle: 'Revoir la présentation de la carte',
+                onTap: () {
+                  ref.read(tutorialProvider.notifier).start();
+                  // Le tutoriel se joue sur la carte, sous cet écran.
+                  context.go('/');
+                },
+              ),
               SettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Confidentialité',

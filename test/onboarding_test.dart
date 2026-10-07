@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mon_carburant_app/features/onboarding/onboarding_screen.dart';
 import 'package:mon_carburant_app/providers/onboarding_provider.dart';
 import 'package:mon_carburant_app/providers/preferences_provider.dart';
+import 'package:mon_carburant_app/providers/tutorial_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -67,6 +68,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(container.read(tutorialProvider), isFalse);
 
     // Plus d'étape « Voiture » : l'accueil commence par la localisation.
     expect(find.text('Votre voiture'), findsNothing);
@@ -80,5 +82,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(container.read(onboardingDoneProvider), isTrue);
+    // La carte s'ouvrira sur son tutoriel, même après une relance.
+    expect(container.read(tutorialProvider), isTrue);
+    expect(prefs.getBool('tutorial_pending_v1'), isTrue);
   });
 }

@@ -8,6 +8,7 @@ import '../../data/services/notification_service.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/price_alerts_provider.dart';
+import '../../providers/tutorial_provider.dart';
 
 enum _Step {
   location('Localisation', Icons.near_me_rounded),
@@ -20,8 +21,9 @@ enum _Step {
 }
 
 /// Accueil du premier lancement, en étapes : la localisation, puis les
-/// alertes de prix. Chaque étape peut être passée ; tout se
-/// règle plus tard depuis l'écran Compte.
+/// alertes de prix. Chaque étape peut être passée ; tout se règle plus tard
+/// depuis l'écran Compte. La carte s'ouvre ensuite sur son tutoriel
+/// (voir `HomeTutorial`).
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -49,6 +51,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _next() {
     if (_index == _steps.length - 1) {
+      // Avant de quitter l'accueil : la carte s'ouvre avec son tutoriel.
+      ref.read(tutorialProvider.notifier).start();
       ref.read(onboardingDoneProvider.notifier).complete();
       return;
     }

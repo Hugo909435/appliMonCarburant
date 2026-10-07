@@ -24,6 +24,7 @@ import '../../providers/filters_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/map_viewport_provider.dart';
 import '../../providers/station_brands_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../shared/widgets/base_map_layer.dart';
 import '../../shared/widgets/brand_logo.dart';
 import '../../shared/widgets/geocoder_credit.dart';
@@ -33,6 +34,7 @@ import '../../shared/widgets/station_sheet.dart';
 import '../../core/config/app_config.dart';
 import 'widgets/ev_station_sheet.dart';
 import 'widgets/ev_station_tile.dart';
+import 'widgets/home_tutorial.dart';
 import 'widgets/map_filter_bar.dart';
 import 'widgets/stations_sheet.dart';
 import 'widgets/sync_indicator.dart';
@@ -90,6 +92,9 @@ class HomeScreen extends ConsumerStatefulWidget {
 
   static const _franceCenter = ll.LatLng(46.6, 2.5);
 
+  /// Deux coins opposés de la France métropolitaine, Corse comprise.
+  static const _franceCorners = [ll.LatLng(51.1, -5.2), ll.LatLng(41.3, 9.6)];
+
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
@@ -98,6 +103,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _mapController = MapController();
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
+
+  /// Repères des commandes que le tutoriel met en lumière.
+  final _tutorial = TutorialTargets();
 
   /// Whether the search is unfolded from its magnifier button.
   final _searchExpanded = ValueNotifier<bool>(false);
@@ -226,6 +234,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// Avant le tutoriel, montre ce dont il va parler dans la partie de la
+  /// carte qu'il éclaire : les stations autour de l'utilisateur, ou à défaut
+  /// la France entière, que la liste cachait à moitié.
+  void _frameForTutorial() {
+    final position = ref.read(userLocationProvider).valueOrNull;
+    _fitVisibleArea(
+      position == null
+          ? HomeScreen._franceCorners
+          : [ll.LatLng(position.latitude, position.longitude)],
+      maxZoom: position == null ? 7 : 13,
+      sheetFraction: StationsSheet.initialFraction,
+    );
+  }
+
   Future<void> _locateMe() async {
     await ref.read(userLocationProvider.notifier).requestLocation();
     if (!mounted) return;
@@ -254,6 +276,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     ref.listen(highwayFilterProvider, (previous, highway) {
       if (highway != null && highway != previous) _fitToFilteredStations();
+    });
+    // Tutoriel rejoué depuis Compte : la carte est déjà là, on la recadre.
+    ref.listen(tutorialProvider, (previous, active) {
+      if (active && previous != true) _frameForTutorial();
     });
     final layer = ref.watch(mapLayerProvider);
     final search = ref.watch(mapSearchProvider);
@@ -298,7 +324,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Publish the viewport as soon as the map is laid out: until
                 // then the markers layer has no bounds to cull to and would
                 // build every station in France.
-                onMapReady: () => _publishCamera(_mapController.camera),
+                onMapReady: () {
+                  // Premier lancement : la carte s'ouvre sur son tutoriel.
+                  if (ref.read(tutorialProvider)) _frameForTutorial();
+                  _publishCamera(_mapController.camera);
+                },
               ),
               children: [
                 const BaseMapLayer(),
@@ -346,6 +376,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         );
                       },
                       child: _BottomControls(
+                        tutorial: _tutorial,
                         ev: layer == MapLayer.bornes,
                         showNearby: position != null,
                         comparisonCount: comparisonCount,
@@ -401,7 +432,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                               child: child,
                                             ),
                                           ),
-                                      child: const MapFilterBar(),
+                                      child: MapFilterBar(
+                                        key: _tutorial.filters,
+                                      ),
                                     ),
                                   ),
                                   _ExpandingSearch(
@@ -419,6 +452,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(width: 4),
                             _MapButton(
+                              key: _tutorial.account,
                               icon: Icons.person_rounded,
                               tooltip: 'Compte',
                               size: _topButtonSize,
@@ -457,6 +491,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
+            // En dernier : par-dessus la carte et toutes ses commandes.
+            HomeTutorial(targets: _tutorial),
           ],
         ),
       ),
@@ -464,9 +500,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-/// Hauteur de la ligne du haut (recherche, filtres, compte), marges
-/// comprises : de quoi laisser passer l'ombre des pastilles.
-const _searchRowHeight = 60.0;
+const _searchRowHeight = kMapTopRowHeight;
 
 /// Côté des boutons de la ligne du haut, aligné sur la hauteur des filtres.
 const _topButtonSize = 40.0;
@@ -481,6 +515,7 @@ const _floatingShadow = [
 /// les raccourcis contextuels, à droite la colonne de navigation.
 class _BottomControls extends StatelessWidget {
   const _BottomControls({
+    required this.tutorial,
     required this.ev,
     required this.showNearby,
     required this.comparisonCount,
@@ -488,6 +523,7 @@ class _BottomControls extends StatelessWidget {
     required this.onLocate,
   });
 
+  final TutorialTargets tutorial;
   final bool ev;
   final bool showNearby;
   final int comparisonCount;
@@ -547,12 +583,14 @@ class _BottomControls extends StatelessWidget {
             _MapButtonGroup(
               children: [
                 _MapButton(
+                  key: tutorial.favorites,
                   icon: Icons.star_rounded,
                   tooltip: 'Favoris',
                   flat: true,
                   onTap: () => context.push('/favoris'),
                 ),
                 _MapButton(
+                  key: tutorial.route,
                   icon: Icons.alt_route_rounded,
                   tooltip: 'Trajet',
                   flat: true,
@@ -562,6 +600,7 @@ class _BottomControls extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _MapButton(
+              key: tutorial.locate,
               icon: Icons.near_me_rounded,
               tooltip: 'Me localiser',
               loading: locationLoading,
@@ -1123,6 +1162,7 @@ class _MapAttribution extends StatelessWidget {
 /// pour l'aligner dans un [_MapButtonGroup].
 class _MapButton extends StatelessWidget {
   const _MapButton({
+    super.key,
     required this.icon,
     required this.tooltip,
     required this.onTap,
