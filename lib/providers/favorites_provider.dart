@@ -8,9 +8,13 @@ import 'auth_provider.dart';
 
 final favoritesServiceProvider = Provider<FavoritesService>((ref) {
   if (isWindowsDesktop) return LocalFavoritesService();
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  if (user == null) return LocalFavoritesService();
-  return FirestoreFavoritesService(user.uid);
+  // Only the uid matters here: a profile change (linked provider, display
+  // name) must not reload the favorites.
+  final uid = ref.watch(
+    currentUserProvider.select((user) => user.valueOrNull?.uid),
+  );
+  if (uid == null) return LocalFavoritesService();
+  return FirestoreFavoritesService(uid);
 });
 
 class FavoritesNotifier extends AsyncNotifier<Set<String>> {

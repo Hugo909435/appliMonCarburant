@@ -297,9 +297,15 @@ class AuthService {
     // which they no longer are once the account is gone.
     await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
     if (appleAuthorizationCode != null) {
-      await FirebaseAuth.instance.revokeTokenWithAuthorizationCode(
-        appleAuthorizationCode,
-      );
+      // Best effort: a failed revocation must not leave the account alive
+      // with its favorites already erased.
+      try {
+        await FirebaseAuth.instance.revokeTokenWithAuthorizationCode(
+          appleAuthorizationCode,
+        );
+      } catch (e) {
+        debugPrint('Révocation du jeton Apple échouée: $e');
+      }
     }
     await user.delete();
     try {
