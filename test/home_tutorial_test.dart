@@ -50,7 +50,6 @@ void main() {
                   height: 40,
                   child: SizedBox(key: targets.filters),
                 ),
-                Positioned(top: 10, right: 12, child: button(targets.account)),
                 Positioned(
                   right: 12,
                   bottom: 300,
@@ -58,6 +57,7 @@ void main() {
                     children: [
                       button(targets.favorites),
                       button(targets.route),
+                      button(targets.account),
                       button(targets.locate),
                     ],
                   ),

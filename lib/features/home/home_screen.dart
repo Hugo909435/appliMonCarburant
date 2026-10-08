@@ -55,6 +55,10 @@ const _viewportPadding = 0.3;
 /// never builds more than a couple hundred markers, however far out it is.
 const _thinningMaxZoom = 15.0;
 
+/// Après une recherche, la carte dézoome au besoin jusqu'à montrer au moins
+/// autant de stations : une ville sans station ne laisse pas une carte vide.
+const _minStationsAfterSearch = 2;
+
 /// Au-delà, même un filtre de zone garde l'écrémage de [_thinOut]. Le plus
 /// gros département compte moins de 300 stations et l'ensemble des
 /// autoroutes un peu plus de 400 : la marge couvre l'un comme l'autre.
@@ -130,7 +134,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchController.text = result.title;
     _searchFocus.unfocus();
     ref.read(mapSearchProvider.notifier).clear();
-    _mapController.move(ll.LatLng(result.lat, result.lng), 15);
+    final target = ll.LatLng(result.lat, result.lng);
+    final nearest = _nearestStations(target, _minStationsAfterSearch);
+    if (nearest.isEmpty) {
+      _mapController.move(target, _thinningMaxZoom);
+      return;
+    }
+    // Chaque station est doublée de son symétrique par rapport au lieu
+    // cherché : le cadre s'élargit jusqu'à elles sans que le lieu quitte le
+    // centre de la carte visible.
+    _fitVisibleArea(
+      [
+        target,
+        for (final s in nearest) ...[
+          ll.LatLng(s.lat, s.lng),
+          ll.LatLng(2 * target.latitude - s.lat, 2 * target.longitude - s.lng),
+        ],
+      ],
+      maxZoom: _thinningMaxZoom,
+      sheetFraction: math.min(
+        _sheetExtent.value,
+        StationsSheet.initialFraction,
+      ),
+    );
+  }
+
+  /// Les [count] stations affichées sur la carte les plus proches de [point]
+  /// (filtres en cours compris). Vide hors de la couche stations : les
+  /// bornes ne sont chargées que pour la zone visible.
+  List<Station> _nearestStations(ll.LatLng point, int count) {
+    if (ref.read(mapLayerProvider) != MapLayer.stations) return const [];
+    final byDistance = [
+      for (final s in ref.read(brandFilteredStationsProvider))
+        if (s.lat != 0 || s.lng != 0)
+          (s, s.distanceKmTo(point.latitude, point.longitude)),
+    ]..sort((a, b) => a.$2.compareTo(b.$2));
+    return [for (final (s, _) in byDistance.take(count)) s];
   }
 
   void _clearSearch() {
@@ -351,7 +390,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             // La liste s'arrête sous la ligne de recherche : ouverte en
             // grand, elle recouvre les filtres (qui s'effacent) mais jamais
-            // la recherche ni le compte.
+            // la recherche.
             Positioned.fill(
               top: topInset + _searchRowHeight,
               child: LayoutBuilder(
@@ -403,8 +442,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Une seule ligne : loupe, filtres qui défilent entre les
-                    // deux, compte. Dépliée, la recherche recouvre les filtres.
+                    // Une seule ligne : loupe, puis les filtres qui défilent
+                    // jusqu'au bord. Dépliée, la recherche recouvre les filtres.
                     SizedBox(
                       height: _searchRowHeight,
                       child: Padding(
@@ -449,14 +488,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            _MapButton(
-                              key: _tutorial.account,
-                              icon: Icons.person_rounded,
-                              tooltip: 'Compte',
-                              size: _topButtonSize,
-                              onTap: () => context.push('/compte'),
                             ),
                           ],
                         ),
@@ -503,7 +534,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 const _searchRowHeight = kMapTopRowHeight;
 
 /// Côté des boutons de la ligne du haut, aligné sur la hauteur des filtres.
-const _topButtonSize = 40.0;
+const _topButtonSize = 44.0;
 
 /// Ombre commune des commandes posées sur la carte : large et diffuse
 /// plutôt qu'un liseré, pour qu'elles flottent sans alourdir.
@@ -595,6 +626,14 @@ class _BottomControls extends StatelessWidget {
                   tooltip: 'Trajet',
                   flat: true,
                   onTap: () => context.push('/trajet'),
+                ),
+                // En dernier : le moins utilisé des trois.
+                _MapButton(
+                  key: tutorial.account,
+                  icon: Icons.person_rounded,
+                  tooltip: 'Compte',
+                  flat: true,
+                  onTap: () => context.push('/compte'),
                 ),
               ],
             ),
@@ -1168,15 +1207,15 @@ class _MapButton extends StatelessWidget {
     required this.onTap,
     this.loading = false,
     this.flat = false,
-    this.size = 48,
   });
+
+  static const _size = 48.0;
 
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
   final bool loading;
   final bool flat;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -1186,8 +1225,8 @@ class _MapButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: loading ? null : onTap,
         child: SizedBox(
-          width: size,
-          height: size,
+          width: _size,
+          height: _size,
           child: loading
               ? const Padding(
                   padding: EdgeInsets.all(15),
@@ -1196,7 +1235,7 @@ class _MapButton extends StatelessWidget {
                     color: AppColors.primary,
                   ),
                 )
-              : Icon(icon, color: AppColors.primary, size: size * 0.46),
+              : Icon(icon, color: AppColors.primary, size: _size * 0.46),
         ),
       ),
     );
@@ -1414,7 +1453,7 @@ class _ExpandingSearchState extends State<_ExpandingSearch> {
         child: SizedBox(
           width: _topButtonSize,
           height: _topButtonSize,
-          child: Icon(Icons.search_rounded, color: AppColors.primary, size: 19),
+          child: Icon(Icons.search_rounded, color: AppColors.primary, size: 21),
         ),
       ),
     ),
@@ -1447,6 +1486,9 @@ class _ExpandingSearchState extends State<_ExpandingSearch> {
               ),
               filled: false,
               isCollapsed: true,
+              // Sans quoi les marges du thème s'appliquent malgré
+              // isCollapsed et décentrent le texte dans la gélule.
+              contentPadding: EdgeInsets.zero,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,

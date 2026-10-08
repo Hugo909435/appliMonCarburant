@@ -15,6 +15,7 @@ import '../../../providers/station_brands_provider.dart';
 import '../../../providers/stations_provider.dart';
 import '../../../shared/widgets/brand_logo.dart';
 import '../../../shared/widgets/loading_bar.dart';
+import 'home_tutorial.dart' show kMapTopRowHeight;
 
 /// Each filter's icon gets its own fixed color so it reads as a small
 /// "logo" at a glance — the chips themselves stay white/navy.
@@ -101,11 +102,11 @@ class _MapFilterBarState extends ConsumerState<MapFilterBar> {
       ...refinements.where((r) => !r.$1).map((r) => r.$2),
     ];
 
-    // Posée entre la loupe et le compte : sa hauteur garde de la place pour
+    // Posée à droite de la loupe : sa hauteur garde de la place pour
     // l'ombre des pastilles, que la liste rognerait sinon. Le fondu n'apparaît
     // que du côté où il reste des filtres à voir.
     return SizedBox(
-      height: 60,
+      height: kMapTopRowHeight,
       child: Stack(
         alignment: Alignment.centerRight,
         children: [
@@ -221,13 +222,13 @@ class _LayerToggle extends StatelessWidget {
           onTap: () => onChanged(value),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 32,
-            height: 32,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: selected ? color : Colors.transparent,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 18, color: selected ? Colors.white : color),
+            child: Icon(icon, size: 21, color: selected ? Colors.white : color),
           ),
         ),
       );
@@ -236,7 +237,7 @@ class _LayerToggle extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(19)),
+        borderRadius: BorderRadius.all(Radius.circular(22)),
         boxShadow: _chipShadow,
       ),
       child: Padding(
@@ -284,11 +285,11 @@ class _MoreArrow extends StatelessWidget {
           customBorder: const CircleBorder(),
           onTap: onTap,
           child: const SizedBox(
-            width: 30,
-            height: 30,
+            width: 34,
+            height: 34,
             child: Icon(
               Icons.chevron_right_rounded,
-              size: 22,
+              size: 24,
               color: AppColors.primary,
             ),
           ),
@@ -1111,7 +1112,7 @@ class _Pill extends StatelessWidget {
     final fg = selected ? Colors.white : AppColors.primary;
     return DecoratedBox(
       decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(19)),
+        borderRadius: BorderRadius.all(Radius.circular(22)),
         boxShadow: _chipShadow,
       ),
       child: Material(
@@ -1122,18 +1123,18 @@ class _Pill extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 16, color: iconColor ?? fg),
+                Icon(icon, size: 18, color: iconColor ?? fg),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
                     color: fg,
                     fontWeight: FontWeight.w700,
-                    fontSize: 12.5,
+                    fontSize: 14,
                   ),
                 ),
                 if (trailing != null) ...[

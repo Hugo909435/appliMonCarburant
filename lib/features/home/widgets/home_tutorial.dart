@@ -5,9 +5,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../providers/tutorial_provider.dart';
 import 'stations_sheet.dart';
 
-/// Hauteur de la ligne du haut de la carte (recherche, filtres, compte),
+/// Hauteur de la ligne du haut de la carte (recherche, filtres),
 /// marges comprises : de quoi laisser passer l'ombre des pastilles.
-const kMapTopRowHeight = 60.0;
+const kMapTopRowHeight = 66.0;
 
 /// Les commandes de la carte que le tutoriel met en lumière. Chaque clé est
 /// posée par l'écran d'accueil sur la commande correspondante.
@@ -77,9 +77,9 @@ final _steps = <_Step>[
     // porte s'étend, elle, sur toute la largeur.
     area: (screen, padding) => Rect.fromLTWH(
       12,
-      padding.top + (kMapTopRowHeight - 40) / 2,
-      40,
-      40,
+      padding.top + (kMapTopRowHeight - 44) / 2,
+      44,
+      44,
     ).inflate(6),
   ),
   _Step(
